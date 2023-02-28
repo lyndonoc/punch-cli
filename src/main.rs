@@ -1,37 +1,27 @@
-#![allow(unused_imports)]
 #[macro_use]
 extern crate diesel;
 #[macro_use]
 extern crate diesel_migrations;
 
-extern crate chrono;
+pub mod db;
+pub mod model;
+pub mod schema;
+pub mod utils;
+
+use crate::db::create_connection;
+use crate::model::*;
+use crate::schema::tasks::{finished_at, name, started_at, table};
+use crate::utils::{seconds_to_duration, utc_ts_to_local_datetime, write_tab_written_message};
 
 use ansi_term::Colour::{Cyan, Green, Purple, Red, Yellow};
-
-use chrono::{DateTime, Local, NaiveDateTime, Timelike, Utc};
-
+use chrono::{DateTime, Utc};
 use clap::{arg, Command};
-
 use dateparser;
-
-use db::schema::tasks::{finished_at, name, started_at};
-use db::{
-    create_connection, model::*, schema::*, seconds_to_duration, utc_ts_to_local_datetime,
-    write_tab_written_message,
-};
-
-use diesel::dsl::max;
 use diesel::prelude::*;
 use diesel::sql_query;
 use diesel_migrations::embed_migrations;
-
 use std::cmp;
-use std::convert::TryInto;
-use std::io::Write;
-use std::ptr::write;
 use std::time::{SystemTime, UNIX_EPOCH};
-
-use tabwriter::TabWriter;
 
 embed_migrations!("./migrations");
 
@@ -83,7 +73,7 @@ fn main() -> Result<(), std::io::Error> {
                 std::process::exit(1);
             }
             let new_task = new_task(task_name);
-            diesel::insert_into(tasks::table)
+            diesel::insert_into(table)
                 .values(&new_task)
                 .execute(&conn)
                 .unwrap();
@@ -106,7 +96,7 @@ fn main() -> Result<(), std::io::Error> {
                 std::process::exit(1);
             }
             let finished_ts = get_ts().unwrap().as_secs() as i64;
-            diesel::update(tasks::table.find(existing[0].id))
+            diesel::update(table.find(existing[0].id))
                 .set(finished_at.eq(finished_ts))
                 .execute(&conn)
                 .unwrap();
@@ -129,7 +119,7 @@ fn main() -> Result<(), std::io::Error> {
                 );
                 std::process::exit(1);
             }
-            diesel::delete(tasks::table.find(started[0].id))
+            diesel::delete(table.find(started[0].id))
                 .execute(&conn)
                 .unwrap();
             println!("cancelled {}", Cyan.paint(task_name));
@@ -138,8 +128,8 @@ fn main() -> Result<(), std::io::Error> {
             let tasks: Vec<AggregatedTask> = sql_query(
                 "SELECT name, max(started_at) as started_at, case when count(*) - count(finished_at) > 0 then null else max(finished_at) end as finished_at, sum(finished_at - started_at) as duration FROM tasks GROUP BY name;",
             )
-            .load(&conn)
-            .unwrap();
+                .load(&conn)
+                .unwrap();
             write_tab_written_message(
                 tasks
                     .iter()
@@ -203,7 +193,7 @@ fn main() -> Result<(), std::io::Error> {
             };
             let since = since_dt.signed_duration_since(epoch_dt).num_seconds();
             let until = until_dt.signed_duration_since(epoch_dt).num_seconds();
-            let tasks = tasks::table
+            let tasks = table
                 .filter(name.eq(task_name))
                 .filter(finished_at.ge(since))
                 .or_filter(finished_at.is_null())

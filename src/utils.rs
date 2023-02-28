@@ -1,24 +1,7 @@
-#[allow(unused_imports)]
-#[macro_use]
-extern crate diesel;
-
-pub mod model;
-pub mod schema;
-
 use chrono::{DateTime, Duration, Local, NaiveDateTime, Utc};
-
-use diesel::prelude::*;
-use diesel::sqlite::SqliteConnection;
-
 use hhmmss::Hhmmss;
-
 use std::io::Write;
-
 use tabwriter::TabWriter;
-
-pub fn create_connection() -> Result<SqliteConnection, std::io::Error> {
-    Ok(SqliteConnection::establish("punchcard.db").expect("shit"))
-}
 
 pub fn utc_ts_to_local_datetime(utc_ts: i64) -> String {
     let ts_ndt = NaiveDateTime::from_timestamp(i64::from(utc_ts), 0);

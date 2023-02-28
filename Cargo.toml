@@ -3,10 +3,6 @@ name = "punch-cli"
 version = "0.1.0"
 edition = "2018"
 
-[lib]
-name="db"
-path="src/lib.rs"
-
 [dependencies]
 ansi_term = "0.12"
 clap = "3.1.1"
