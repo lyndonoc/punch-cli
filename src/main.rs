@@ -167,6 +167,9 @@ fn main() -> Result<(), std::io::Error> {
             );
         }
         Some(("get", sub_matches)) => {
+            if !sub_matches.is_present("NAME") {
+                panic!("you must provide the task name")
+            }
             let task_name = sub_matches.value_of("NAME").unwrap();
             let epoch_dt: DateTime<Utc> = UNIX_EPOCH.into();
             let now_dt: DateTime<Utc> = SystemTime::now().into();
