@@ -3,6 +3,7 @@ extern crate diesel;
 #[macro_use]
 extern crate diesel_migrations;
 
+pub mod auth;
 pub mod db;
 pub mod model;
 pub mod schema;

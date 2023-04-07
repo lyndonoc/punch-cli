@@ -11,5 +11,8 @@ dateparser = "0.1.6"
 diesel = { version = "1.4.8", features = ["sqlite"]}
 diesel_migrations = "1.4.0"
 hhmmss = "0.1.0"
+keyring = "2.0.0"
 libsqlite3-sys = { version = ">=0.8.0, <0.13.0", optional = true, features = ["bundled"] }
+serde = "1.0.159"
+serde_json = "1.0"
 tabwriter = { version = "1", features = ["ansi_formatting"] }
