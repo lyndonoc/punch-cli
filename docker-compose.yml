@@ -1,0 +1,17 @@
+version: "3"
+
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    container_name: server
+    environment:
+      - ROCKET_ADDRESS=0.0.0.0
+      - ROCKET_PORT=4000
+    env_file:
+      - ./server/.env
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./server:/app
