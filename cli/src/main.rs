@@ -3,7 +3,9 @@ extern crate diesel;
 #[macro_use]
 extern crate diesel_migrations;
 
+pub mod api;
 pub mod auth;
+pub mod configs;
 pub mod db;
 pub mod keyring;
 pub mod model;
@@ -16,6 +18,7 @@ use crate::schema::tasks::{finished_at, name, started_at, table};
 use crate::utils::{seconds_to_duration, utc_ts_to_local_datetime, write_tab_written_message};
 
 use ansi_term::Colour::{Cyan, Green, Purple, Red, Yellow};
+use api::api::{fetch_client_id, fetch_login_info, prompt_and_fetch_tokens};
 use chrono::{DateTime, Utc};
 use clap::{arg, Command};
 use dateparser;
@@ -28,6 +31,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 embed_migrations!("./migrations");
 
 fn main() -> Result<(), std::io::Error> {
+    let configs = configs::fetch_configs();
+    let client_id_info = fetch_client_id(&configs);
+    let ci = fetch_login_info(&client_id_info);
+    let user = prompt_and_fetch_tokens(&client_id_info, &ci);
+    println!("Hi there: {:?}", user);
     let matches = Command::new("Punch CLI")
         .subcommand_required(true)
         .arg_required_else_help(true)

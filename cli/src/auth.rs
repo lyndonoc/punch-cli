@@ -1,6 +1,5 @@
 use crate::keyring::SecretsManager;
 
-use keyring::Entry;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]

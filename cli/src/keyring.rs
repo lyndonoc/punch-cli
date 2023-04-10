@@ -1,6 +1,5 @@
 use keyring::Entry;
 use serde::de::DeserializeOwned;
-use serde::Deserialize;
 use serde_json::{from_value, Value};
 
 pub trait SecretsManager {
