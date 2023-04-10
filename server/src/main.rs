@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate rocket;
 
+pub mod api;
 pub mod configs;
 pub mod routes;
 pub mod state;
