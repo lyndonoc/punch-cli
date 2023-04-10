@@ -3,14 +3,6 @@ extern crate dotenv;
 use dotenv::dotenv;
 use std::env;
 
-pub fn fetch() {
-    dotenv().ok();
-
-    for (key, value) in env::vars() {
-        println!("{}: {}", key, value);
-    }
-}
-
 pub struct AppConfigs {
     pub github_client_id: String,
     pub github_client_secret: String,
@@ -30,7 +22,6 @@ pub fn fetch_configs() -> AppConfigs {
             continue;
         }
     }
-    println!("{}, {}", github_client_id, github_client_secret);
     if github_client_id.is_empty() || github_client_secret.is_empty() {
         panic!("missing required environment variables")
     }
