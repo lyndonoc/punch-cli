@@ -6,7 +6,7 @@ pub mod routes;
 pub mod state;
 
 use crate::configs::fetch_configs;
-use crate::routes::auth::login;
+use crate::routes::auth::client_id;
 use crate::state::AppDeps;
 
 #[get("/")]
@@ -21,5 +21,5 @@ fn rocket() -> _ {
             configs: fetch_configs(),
         })
         .mount("/ping", routes![ping])
-        .mount("/auth", routes![login])
+        .mount("/auth", routes![client_id])
 }
