@@ -1,5 +1,7 @@
 use chrono::{DateTime, Duration, Local, NaiveDateTime, Utc};
 use hhmmss::Hhmmss;
+use std::fmt;
+use std::fmt::Formatter;
 use std::io::Write;
 use tabwriter::TabWriter;
 
@@ -19,4 +21,17 @@ pub fn write_tab_written_message(message: String) {
     tw.write_all(message.as_bytes()).unwrap();
     tw.flush().unwrap();
     println!("{}", String::from_utf8(tw.into_inner().unwrap()).unwrap());
+}
+
+pub type SimpleMessageResult<T> = std::result::Result<T, SimpleError>;
+
+#[derive(Debug, Clone)]
+pub struct SimpleError {
+    pub message: String,
+}
+
+impl fmt::Display for SimpleError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.message.clone())
+    }
 }

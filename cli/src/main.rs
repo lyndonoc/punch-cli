@@ -17,10 +17,10 @@ use crate::model::*;
 use crate::schema::tasks::{finished_at, name, started_at, table};
 use crate::utils::{seconds_to_duration, utc_ts_to_local_datetime, write_tab_written_message};
 
-use crate::api::api::{fetch_access_token, verify_access_token};
-use crate::keyring::{KeyRingManager, SecretsManager};
+use crate::auth::AuthManager;
+use crate::configs::fetch_configs;
+use crate::keyring::new_key_ring_manager;
 use ansi_term::Colour::{Cyan, Green, Purple, Red, Yellow};
-use api::github::{fetch_gh_client_id, fetch_gh_login_info, prompt_and_fetch_gh_tokens};
 use chrono::{DateTime, Utc};
 use clap::{arg, Command};
 use dateparser;
@@ -33,23 +33,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 embed_migrations!("./migrations");
 
 fn main() -> Result<(), std::io::Error> {
-    let configs = configs::fetch_configs();
-    let client_id_info = fetch_gh_client_id(&configs);
-    let ci = fetch_gh_login_info(&client_id_info);
-    let user = prompt_and_fetch_gh_tokens(&client_id_info, &ci);
-    let at = fetch_access_token(
-        String::from("http://localhost:8000/auth/login"),
-        user.access_token.clone(),
-    );
-    let verified = verify_access_token(
-        String::from("http://localhost:8000/auth/verify"),
-        at.clone(),
-    );
-    println!("token: {}", verified);
-    // let krm = KeyRingManager::new();
-    // krm.save_secrets(at);
-    // println!("{:?}", krm.retrieve_secrets::<String>());
-
+    let cf = fetch_configs();
+    let sm = new_key_ring_manager();
+    let mut am = AuthManager::new(cf, sm);
+    am.initialize();
     let matches = Command::new("Punch CLI")
         .subcommand_required(true)
         .arg_required_else_help(true)

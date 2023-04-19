@@ -41,3 +41,5 @@ pub async fn fetch_gh_user(client_id: String, client_secret: String, token: Stri
         .expect("failed to parse response from GitHub");
     res.user
 }
+
+pub async fn verify_gh_token() {}

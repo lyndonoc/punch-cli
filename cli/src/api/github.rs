@@ -1,7 +1,4 @@
-use crate::configs;
-
 use chrono::{Duration, Utc};
-use configs::AppConfigs;
 use serde::{Deserialize, Serialize};
 use std::{thread, time};
 
@@ -43,15 +40,15 @@ pub struct TokenResponse {
     scope: String,
 }
 
-pub fn fetch_gh_client_id(app_configs: &AppConfigs) -> LoginPayload {
-    let res = reqwest::blocking::get(format!("{}/auth/client_id", app_configs.api_endpoint))
+pub fn fetch_gh_client_id(api_endpoint: &String, scope: &String) -> LoginPayload {
+    let res = reqwest::blocking::get(format!("{}/auth/client_id", api_endpoint))
         .expect("failed to fetch client id from the server");
     let client_id = res
         .text()
         .expect("failed to parse client id from the response");
     LoginPayload {
         client_id,
-        scope: app_configs.gh_auth_scope.clone(),
+        scope: scope.clone(),
     }
 }
 
@@ -80,10 +77,7 @@ pub fn prompt_and_fetch_gh_tokens(
     client_id_info: &LoginPayload,
     login_info: &LoginResponse,
 ) -> TokenResponse {
-    println!(
-        "please enter your one-time code: {}",
-        login_info.user_code.clone()
-    );
+    println!("please enter your one-time code: {}", &login_info.user_code,);
     _ = open::that(login_info.verification_uri.clone());
     let auth_payload = AccessTokenPayload {
         client_id: client_id_info.client_id.clone(),

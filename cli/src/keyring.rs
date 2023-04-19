@@ -1,10 +1,8 @@
-use keyring::Entry;
-use serde::de::DeserializeOwned;
-use serde_json::{from_value, Value};
+use keyring::{Entry, Result};
 
 pub trait SecretsManager {
-    fn new() -> Self;
-    fn retrieve_secrets<T: DeserializeOwned>(&self) -> Option<T>;
+    fn remove_secret(&self);
+    fn retrieve_secrets(&self) -> Result<String>;
     fn save_secrets(&self, pwd: &str);
 }
 
@@ -13,14 +11,12 @@ pub struct KeyRingManager {
 }
 
 impl SecretsManager for KeyRingManager {
-    fn new() -> Self {
-        let storage = Entry::new("punch-cli", "session_info").expect("failed to read keyring");
-        KeyRingManager { storage }
+    fn remove_secret(&self) {
+        self.storage.delete_password().unwrap()
     }
-    fn retrieve_secrets<T: DeserializeOwned>(&self) -> Option<T> {
-        let pwd = self.storage.get_password().expect("");
-        let json_value = Value::String(pwd);
-        from_value::<Option<T>>(json_value).unwrap_or_else(|_| None::<T>)
+
+    fn retrieve_secrets(&self) -> Result<String> {
+        self.storage.get_password()
     }
 
     fn save_secrets(&self, pwd: &str) {
@@ -28,4 +24,9 @@ impl SecretsManager for KeyRingManager {
             .set_password(&pwd)
             .expect("failed to save token to keyring");
     }
+}
+
+pub fn new_key_ring_manager() -> impl SecretsManager {
+    let storage = Entry::new("punch-cli", "session_info").expect("failed to read keyring wowza");
+    KeyRingManager { storage }
 }
