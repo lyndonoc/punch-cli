@@ -1,22 +1,29 @@
 use serde::{Deserialize, Serialize};
-use std::ops::{Add, Mul};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::ops::Add;
+use std::time::Duration;
+use time::OffsetDateTime;
 
 use jsonwebtoken::{
     decode, encode, errors::Result, Algorithm, DecodingKey, EncodingKey, Header, TokenData,
     Validation,
 };
+use rocket::time;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct BaseJWTClaims<T> {
     pub claim: T,
-    exp: usize,
+    iat: i64,
+    exp: i64,
 }
 
-pub fn sign_user_jwt<T: Serialize>(claim: T, secret: String) -> String {
+pub fn sign_user_jwt<T: Serialize>(claim: T, secret: &str) -> String {
+    let iat = OffsetDateTime::now_utc();
+    let exp = OffsetDateTime::now_utc().add(Duration::from_secs(31556926));
+
     let claims = BaseJWTClaims {
         claim,
-        exp: 10000000000,
+        iat: iat.unix_timestamp(),
+        exp: exp.unix_timestamp(),
     };
     let header = Header {
         kid: Some("signing_key".to_owned()),

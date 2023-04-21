@@ -13,18 +13,23 @@ pub struct GitHubUser {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct TokenVerificationResponse {
-    user: GitHubUser,
+pub struct TokenPayload {
+    pub user: GitHubUser,
+    pub token: String,
 }
 
-pub async fn fetch_gh_user(client_id: String, client_secret: String, token: String) -> GitHubUser {
+pub async fn fetch_gh_user(
+    client_id: String,
+    client_secret: String,
+    token: String,
+) -> TokenPayload {
     let mut base64 = String::new();
     _ = general_purpose::STANDARD
         .encode_string(format!("{}:{}", client_id, client_secret), &mut base64);
     let payload = TokenVerificationPayload {
         access_token: token.clone(),
     };
-    let res = reqwest::Client::new()
+    reqwest::Client::new()
         .post(format!(
             "https://api.github.com/applications/{}/token",
             client_id
@@ -36,10 +41,7 @@ pub async fn fetch_gh_user(client_id: String, client_secret: String, token: Stri
         .send()
         .await
         .expect("failed to fetch user")
-        .json::<TokenVerificationResponse>()
+        .json::<TokenPayload>()
         .await
-        .expect("failed to parse response from GitHub");
-    res.user
+        .expect("failed to parse response from GitHub")
 }
-
-pub async fn verify_gh_token() {}

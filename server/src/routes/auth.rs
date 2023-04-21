@@ -1,4 +1,4 @@
-use crate::api::gh::{fetch_gh_user, GitHubUser, TokenVerificationPayload};
+use crate::api::gh::{fetch_gh_user, TokenPayload, TokenVerificationPayload};
 use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::State;
@@ -22,10 +22,10 @@ pub async fn login(
         token_payload.access_token.clone(),
     )
     .await;
-    sign_user_jwt::<GitHubUser>(gh_user, String::from("power"))
+    sign_user_jwt::<TokenPayload>(gh_user, &app_deps.configs.jwt_secret)
 }
 
 #[post("/verify")]
-pub fn verify(_user: GitHubUser) -> Status {
+pub fn verify(_user: TokenPayload) -> Status {
     Status::NoContent
 }
