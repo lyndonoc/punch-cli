@@ -1,4 +1,4 @@
-use crate::keyring::{KeyRingManager, SecretsManager};
+use crate::keyring::SecretsManager;
 
 use crate::api::api::{fetch_access_token, verify_access_token};
 use crate::api::github::{fetch_gh_client_id, fetch_gh_login_info, prompt_and_fetch_gh_tokens};
