@@ -16,12 +16,15 @@ fn ping() -> &'static str {
     "pong"
 }
 
-#[launch]
-fn rocket() -> _ {
+#[rocket::main]
+async fn main() -> Result<(), rocket::Error> {
     rocket::build()
         .manage(AppDeps {
             configs: fetch_configs(),
         })
         .mount("/ping", routes![ping])
         .mount("/auth", routes![client_id, login, verify])
+        .ignite()
+        .await?;
+    Ok(())
 }
