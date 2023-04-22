@@ -1,6 +1,22 @@
 version: "3"
 
 services:
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=punchcli
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=punchcli
+    ports:
+      - 55432:5432
+    volumes:
+      - ./build/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U punchcli" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   server:
     build:
       context: ./server

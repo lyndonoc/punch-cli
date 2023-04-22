@@ -3,3 +3,4 @@ target
 .DS_Store
 punchcard.db
 .env
+/build
