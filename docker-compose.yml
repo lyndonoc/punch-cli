@@ -23,8 +23,10 @@ services:
       dockerfile: Dockerfile.dev
     container_name: server
     environment:
-      - ROCKET_ADDRESS=0.0.0.0
-      - ROCKET_PORT=4000
+      - GITHUB_APP_NAME=punch-cli-dev
+      - GITHUB_CLIENT_ID=862678adb187eb9c2d16
+      # GITHUB_CLIENT_SECRET should be available in server/.env file
+      - JWT_SECRET=punchclisecret
     env_file:
       - ./server/.env
     ports:

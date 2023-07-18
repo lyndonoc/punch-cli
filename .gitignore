@@ -4,3 +4,4 @@ target
 punchcard.db
 .env
 /build
+*.http

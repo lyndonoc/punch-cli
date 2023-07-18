@@ -7,12 +7,12 @@ pub struct TokenVerificationPayload {
     pub access_token: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GitHubUser {
     pub id: u64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TokenPayload {
     pub user: GitHubUser,
     pub token: String,
