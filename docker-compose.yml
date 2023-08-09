@@ -12,7 +12,7 @@ services:
     volumes:
       - ./build/postgres:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U punchcli" ]
+      test: ["CMD-SHELL", "pg_isready -U punchcli"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -23,6 +23,7 @@ services:
       dockerfile: Dockerfile.dev
     container_name: server
     environment:
+      - DATABASE_URL=postgres://punchcli:password@postgres:5432/punchcli
       - GITHUB_APP_NAME=punch-cli-dev
       - GITHUB_CLIENT_ID=862678adb187eb9c2d16
       # GITHUB_CLIENT_SECRET should be available in server/.env file
