@@ -10,3 +10,13 @@ pub struct TaskModel {
     pub finished_at: Option<i64>,
 }
 
+impl TaskModel {
+    pub fn to_json(&self) -> impl Serialize {
+        return serde_json::json!({
+            "id": self.id.to_owned(),
+            "name": self.name.to_owned(),
+            "started_at": self.started_at.to_owned(),
+            "finished_at": self.finished_at.to_owned(),
+        })
+    }
+}

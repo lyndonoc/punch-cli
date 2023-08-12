@@ -72,6 +72,10 @@ async fn main() -> std::io::Result<()> {
                     .route("/login", web::post().to(login))
                     .route("/verify", web::post().to(verify).wrap(bearer_middleware.clone())),
             )
+            .service(
+                web::scope("/punch")
+                    .route("/in", web::post().to(start_new_task).wrap(bearer_middleware.clone())),
+            )
     })
     .bind(("0.0.0.0", 4000))?
     .run()
