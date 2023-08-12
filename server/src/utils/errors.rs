@@ -12,6 +12,9 @@ pub enum PunchTaskError {
 
     #[display(fmt = "the task is already in progress")]
     TaskAlreadyInProgress,
+
+    #[display(fmt = "no such task in progress found")]
+    InProgressTaskNotFound,
 }
 
 impl error::ResponseError for PunchTaskError {
@@ -25,6 +28,7 @@ impl error::ResponseError for PunchTaskError {
         match *self {
             PunchTaskError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
             PunchTaskError::TaskAlreadyInProgress => StatusCode::BAD_REQUEST,
+            PunchTaskError::InProgressTaskNotFound => StatusCode::BAD_REQUEST,
         }
     }
 }
