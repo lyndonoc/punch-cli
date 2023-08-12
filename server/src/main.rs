@@ -19,7 +19,7 @@ pub mod utils;
 
 use crate::configs::fetch_configs;
 use crate::routes::auth::{client_id, login, verify};
-use crate::routes::punch::{finish_task, start_new_task};
+use crate::routes::punch::{cancel_task, finish_task, start_new_task};
 use crate::state::AppDeps;
 use crate::utils::jwt::verify_user_jwt;
 
@@ -74,8 +74,10 @@ async fn main() -> std::io::Result<()> {
             )
             .service(
                 web::scope("/punch")
-                    .route("/in", web::post().to(start_new_task).wrap(bearer_middleware.clone()))
-                    .route("/out", web::post().to(finish_task).wrap(bearer_middleware.clone())),
+                    .route("/in", web::post().to(start_new_task))
+                    .route("/out", web::post().to(finish_task))
+                    .route("/cancel", web::post().to(cancel_task))
+                    .wrap(bearer_middleware.clone()),
             )
     })
     .bind(("0.0.0.0", 4000))?

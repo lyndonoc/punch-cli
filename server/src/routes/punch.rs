@@ -95,3 +95,34 @@ pub async fn finish_task(
         }
     }
 }
+
+pub async fn cancel_task(
+    app_deps: web::Data<AppDeps>,
+    token: web::ReqData<TokenPayload>,
+    task_info: web::Json<BaseTaskInfo>,
+) -> impl Responder {
+    let task_name = task_info.name.to_lowercase();
+    let delete_op = sqlx::query_as!(
+            TaskModel,
+            r#"
+            DELETE FROM tasks
+            WHERE name = $1 AND user_github_id = $2 AND finished_at IS NULL;
+            "#,
+            task_name,
+            token.user.id.to_string(),
+        )
+        .execute(&app_deps.db_pool)
+        .await;
+    match delete_op {
+        Ok(delete_result) => {
+            if delete_result.rows_affected() < 1 {
+                return Err(PunchTaskError::InProgressTaskNotFound);
+            }
+            return Ok(HttpResponse::NoContent());
+        }
+        Err(_) => {
+            return Err(PunchTaskError::InternalError);
+        }
+    }
+}
+
