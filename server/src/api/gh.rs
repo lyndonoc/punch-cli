@@ -1,6 +1,6 @@
 use base64::{engine::general_purpose, Engine};
-use reqwest;
 use serde::{Deserialize, Serialize};
+use reqwest;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TokenVerificationPayload {

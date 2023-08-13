@@ -1,9 +1,9 @@
+use derive_more::{Display, Error};
 use actix_web::{
+    HttpResponse,
     error,
     http::{header::ContentType, StatusCode},
-    HttpResponse,
 };
-use derive_more::{Display, Error};
 
 #[derive(Debug, Display, Error)]
 pub enum PunchTaskError {
@@ -12,6 +12,9 @@ pub enum PunchTaskError {
 
     #[display(fmt = "the task is already in progress")]
     TaskAlreadyInProgress,
+
+    #[display(fmt = "no task with the given name found")]
+    TaskNotFound,
 
     #[display(fmt = "no such task in progress found")]
     InProgressTaskNotFound,
@@ -29,6 +32,7 @@ impl error::ResponseError for PunchTaskError {
             PunchTaskError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
             PunchTaskError::TaskAlreadyInProgress => StatusCode::BAD_REQUEST,
             PunchTaskError::InProgressTaskNotFound => StatusCode::BAD_REQUEST,
+            PunchTaskError::TaskNotFound => StatusCode::NOT_FOUND,
         }
     }
 }

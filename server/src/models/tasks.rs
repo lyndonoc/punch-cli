@@ -20,3 +20,21 @@ impl TaskModel {
         })
     }
 }
+
+pub fn tasks_to_task_report(tasks: Vec<TaskModel>, name: String, right_now: i64) -> impl Serialize {
+    let mut is_in_progress = false;
+    let mut duration_sum: i64 = 0;
+    for task in tasks {
+        if task.finished_at.is_none() {
+            is_in_progress = true;
+            duration_sum = duration_sum + (right_now - task.started_at)
+        } else {
+            duration_sum = duration_sum + (task.finished_at.unwrap() - task.started_at)
+        }
+    }
+    return serde_json::json!({
+        "name": name.to_owned(),
+        "status": if is_in_progress { "in progress" } else { "complete "},
+        "duration": duration_sum,
+    })
+}

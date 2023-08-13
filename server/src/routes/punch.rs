@@ -4,8 +4,8 @@ use actix_web::{HttpResponse, Responder, web};
 use::serde::Deserialize;
 
 use crate::api::gh::TokenPayload;
+use crate::models::tasks::{TaskModel, tasks_to_task_report};
 use crate::state::AppDeps;
-use crate::models::tasks::TaskModel;
 use crate::utils::errors::PunchTaskError;
 
 #[derive(Deserialize)]
@@ -119,6 +119,42 @@ pub async fn cancel_task(
                 return Err(PunchTaskError::InProgressTaskNotFound);
             }
             return Ok(HttpResponse::NoContent());
+        }
+        Err(_) => {
+            return Err(PunchTaskError::InternalError);
+        }
+    }
+}
+
+pub async fn get_task(
+    app_deps: web::Data<AppDeps>,
+    token: web::ReqData<TokenPayload>,
+    name: web::Path<String>,
+) -> impl Responder {
+    let task_name = name.to_lowercase();
+    let right_now = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+        Ok(n) => n.as_secs() as i64,
+        Err(_) => return Err(PunchTaskError::InternalError),
+    };
+    let get_task_op = sqlx::query_as!(
+            TaskModel,
+            r#"
+            SELECT *
+            FROM tasks
+            WHERE name = $1 AND user_github_id = $2;
+            "#,
+            task_name,
+            token.user.id.to_string(),
+        )
+        .fetch_all(&app_deps.db_pool)
+        .await;
+    match get_task_op {
+        Ok(tasks) => {
+            if tasks.len() < 1 {
+                return Err(PunchTaskError::TaskNotFound);
+            }
+            let task_report = tasks_to_task_report(tasks, task_name, right_now);
+            return Ok(HttpResponse::Ok().json(task_report));
         }
         Err(_) => {
             return Err(PunchTaskError::InternalError);

@@ -1,4 +1,3 @@
-use crate::api::gh::TokenPayload;
 use actix_web::{dev::ServiceRequest, error::Error, web, App, HttpMessage, HttpServer, Responder};
 use actix_web_httpauth::{
     extractors::{
@@ -11,15 +10,18 @@ use std::env;
 use sqlx::postgres::PgPoolOptions;
 
 pub mod api;
-pub mod models;
 pub mod configs;
+pub mod models;
 pub mod routes;
 pub mod state;
 pub mod utils;
 
+use crate::api::gh::TokenPayload;
 use crate::configs::fetch_configs;
-use crate::routes::auth::{client_id, login, verify};
-use crate::routes::punch::{cancel_task, finish_task, start_new_task};
+use crate::routes::{
+    auth::{client_id, login, verify},
+    punch::{cancel_task, finish_task, start_new_task, get_task}
+};
 use crate::state::AppDeps;
 use crate::utils::jwt::verify_user_jwt;
 
@@ -77,6 +79,7 @@ async fn main() -> std::io::Result<()> {
                     .route("/in", web::post().to(start_new_task))
                     .route("/out", web::post().to(finish_task))
                     .route("/cancel", web::post().to(cancel_task))
+                    .route("/get/{task_name}", web::get().to(get_task))
                     .wrap(bearer_middleware.clone()),
             )
     })

@@ -1,5 +1,6 @@
-use crate::configs::AppConfigs;
 use sqlx::postgres::PgPool;
+
+use crate::configs::AppConfigs;
 
 pub struct AppDeps {
     pub configs: AppConfigs,
