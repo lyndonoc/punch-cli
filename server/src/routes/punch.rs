@@ -1,10 +1,10 @@
+use actix_web::{web, HttpResponse, Responder};
 use std::time::SystemTime;
-use actix_web::{HttpResponse, Responder, web};
 
-use::serde::Deserialize;
+use ::serde::Deserialize;
 
 use crate::api::gh::TokenPayload;
-use crate::models::tasks::{TaskModel, tasks_to_task_report};
+use crate::models::tasks::{tasks_to_task_report, TaskModel};
 use crate::state::AppDeps;
 use crate::utils::errors::PunchTaskError;
 
@@ -33,21 +33,21 @@ pub async fn start_new_task(
         return Err(PunchTaskError::TaskAlreadyInProgress);
     }
     let new_task_op = sqlx::query_as!(
-            TaskModel,
-            r#"
+        TaskModel,
+        r#"
             INSERT INTO tasks (name, user_github_id, started_at)
             VALUES ($1, $2, $3)
             RETURNING *;
             "#,
-            task_name,
-            token.user.id.to_string(),
-            match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
-                Ok(n) => n.as_secs() as i64,
-                Err(_) => return Err(PunchTaskError::InternalError),
-            },
-        )
-        .fetch_one(&app_deps.db_pool)
-        .await;
+        task_name,
+        token.user.id.to_string(),
+        match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+            Ok(n) => n.as_secs() as i64,
+            Err(_) => return Err(PunchTaskError::InternalError),
+        },
+    )
+    .fetch_one(&app_deps.db_pool)
+    .await;
     match new_task_op {
         Ok(new_task) => {
             return Ok(HttpResponse::Ok().json(new_task.to_json()));
@@ -69,19 +69,19 @@ pub async fn finish_task(
         Err(_) => return Err(PunchTaskError::InternalError),
     };
     let update_op = sqlx::query_as!(
-            TaskModel,
-            r#"
+        TaskModel,
+        r#"
             UPDATE tasks
             SET finished_at = $1
             WHERE name = $2 AND user_github_id = $3 AND finished_at IS NULL
             RETURNING *;
             "#,
-            finished_at,
-            task_name,
-            token.user.id.to_string(),
-        )
-        .fetch_one(&app_deps.db_pool)
-        .await;
+        finished_at,
+        task_name,
+        token.user.id.to_string(),
+    )
+    .fetch_one(&app_deps.db_pool)
+    .await;
     match update_op {
         Ok(updated_task) => {
             return Ok(HttpResponse::Ok().json(updated_task.to_json()));
@@ -103,16 +103,16 @@ pub async fn cancel_task(
 ) -> impl Responder {
     let task_name = task_info.name.to_lowercase();
     let delete_op = sqlx::query_as!(
-            TaskModel,
-            r#"
+        TaskModel,
+        r#"
             DELETE FROM tasks
             WHERE name = $1 AND user_github_id = $2 AND finished_at IS NULL;
             "#,
-            task_name,
-            token.user.id.to_string(),
-        )
-        .execute(&app_deps.db_pool)
-        .await;
+        task_name,
+        token.user.id.to_string(),
+    )
+    .execute(&app_deps.db_pool)
+    .await;
     match delete_op {
         Ok(delete_result) => {
             if delete_result.rows_affected() < 1 {
@@ -137,17 +137,17 @@ pub async fn get_task(
         Err(_) => return Err(PunchTaskError::InternalError),
     };
     let get_task_op = sqlx::query_as!(
-            TaskModel,
-            r#"
+        TaskModel,
+        r#"
             SELECT *
             FROM tasks
             WHERE name = $1 AND user_github_id = $2;
             "#,
-            task_name,
-            token.user.id.to_string(),
-        )
-        .fetch_all(&app_deps.db_pool)
-        .await;
+        task_name,
+        token.user.id.to_string(),
+    )
+    .fetch_all(&app_deps.db_pool)
+    .await;
     match get_task_op {
         Ok(tasks) => {
             if tasks.len() < 1 {
@@ -161,4 +161,3 @@ pub async fn get_task(
         }
     }
 }
-
