@@ -5,24 +5,32 @@ use crate::api::github::{fetch_gh_client_id, fetch_gh_login_info, prompt_and_fet
 use crate::configs::AppConfigs;
 use crate::utils::SimpleError;
 
-pub struct AuthManager<T: SecretsManager> {
-    configs: AppConfigs,
+pub struct AuthManager<'a, T: SecretsManager> {
+    configs: &'a AppConfigs,
     pub is_logged_in: bool,
     keyring_manager: T,
     token: Option<String>,
 }
 
-impl<T> AuthManager<T>
+impl<T> AuthManager<'_, T>
 where
     T: SecretsManager,
 {
-    pub fn new(configs: AppConfigs, keyring_manager: T) -> AuthManager<T> {
+    pub fn new(configs: &AppConfigs, keyring_manager: T) -> AuthManager<T> {
         AuthManager {
             configs,
             is_logged_in: false,
             keyring_manager,
             token: None,
         }
+    }
+
+    pub fn get_access_token(&self) -> Option<String> {
+        self.token.clone()
+    }
+
+    pub fn get_is_logged_in(&self) -> bool {
+        self.is_logged_in
     }
 
     pub fn initialize(&mut self) {
@@ -35,10 +43,12 @@ where
         }
         match self.verify_login(&token) {
             Ok(_) => {
+                self.keyring_manager.save_secrets(&token);
                 self.token = Some(token);
                 self.is_logged_in = true;
             }
             Err(err) => {
+                self.keyring_manager.remove_secret();
                 panic!("{}", err);
             }
         };

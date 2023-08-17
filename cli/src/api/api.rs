@@ -1,5 +1,4 @@
-use reqwest;
-use reqwest::{Result, StatusCode};
+use reqwest::{blocking, Result, StatusCode};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -7,8 +6,21 @@ pub struct FetchAccessTokenPayload {
     access_token: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TaskInfoPayload {
+    name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct APITaskInfo {
+    pub id: i64,
+    pub name: String,
+    pub started_at: i64,
+    pub finished_at: Option<i64>,
+}
+
 pub fn fetch_access_token(api_endpoint: String, access_token: &String) -> String {
-    let res = reqwest::blocking::Client::new()
+    let res = blocking::Client::new()
         .post(api_endpoint)
         .json(&FetchAccessTokenPayload {
             access_token: access_token.clone(),
@@ -20,10 +32,34 @@ pub fn fetch_access_token(api_endpoint: String, access_token: &String) -> String
 }
 
 pub fn verify_access_token(api_endpoint: String, access_token: &str) -> Result<bool> {
-    let res = reqwest::blocking::Client::new()
+    let res = blocking::Client::new()
         .post(api_endpoint)
         .header("Authorization", format!("Bearer {}", access_token))
         .send()
         .expect("request to verify the token failed");
     Ok(res.status() == StatusCode::NO_CONTENT)
+}
+
+pub fn start_task(
+    api_endpoint: String,
+    access_token: String,
+    task_name: String,
+) -> std::result::Result<APITaskInfo, String> {
+    let res = blocking::Client::new()
+        .post(api_endpoint)
+        .json(&TaskInfoPayload { name: task_name })
+        .header("Authorization", format!("Bearer {}", access_token))
+        .send();
+    match res {
+        Ok(resp) => match resp.status() {
+            StatusCode::OK => resp
+                .json::<APITaskInfo>()
+                .map_err(|e| format!("failed to parse the response: {}", e)),
+            _ => match resp.text() {
+                Ok(err_msg) => Err(err_msg),
+                Err(err) => Err(format!("failed to parse the response: {}", err)),
+            },
+        },
+        Err(err) => Err(err.to_string()),
+    }
 }

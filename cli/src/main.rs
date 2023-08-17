@@ -9,6 +9,7 @@ pub mod configs;
 pub mod db;
 pub mod keyring;
 pub mod model;
+pub mod puncher;
 pub mod schema;
 pub mod utils;
 
@@ -20,6 +21,7 @@ use crate::utils::{seconds_to_duration, utc_ts_to_local_datetime, write_tab_writ
 use crate::auth::AuthManager;
 use crate::configs::fetch_configs;
 use crate::keyring::new_key_ring_manager;
+use crate::puncher::Puncher;
 use ansi_term::Colour::{Cyan, Green, Purple, Red, Yellow};
 use chrono::{DateTime, Utc};
 use clap::{arg, Command};
@@ -33,10 +35,13 @@ use std::time::{SystemTime, UNIX_EPOCH};
 embed_migrations!("./migrations");
 
 fn main() -> Result<(), std::io::Error> {
+    let conn = create_connection().unwrap();
     let cf = fetch_configs();
     let sm = new_key_ring_manager();
-    let mut am = AuthManager::new(cf, sm);
+    let mut am = AuthManager::new(&cf, sm);
     am.initialize();
+    let puncher = Puncher::new(&am, &cf, &conn);
+
     let matches = Command::new("Punch CLI")
         .subcommand_required(true)
         .arg_required_else_help(true)
@@ -65,38 +70,30 @@ fn main() -> Result<(), std::io::Error> {
         .subcommand(Command::new("list").about("list all tasks and their status"))
         .get_matches();
 
-    let conn = create_connection().unwrap();
-
     embedded_migrations::run(&conn).unwrap();
     embedded_migrations::run_with_output(&conn, &mut std::io::stdout()).unwrap();
 
     match matches.subcommand() {
         Some(("in", sub_matches)) => {
             let task_name = sub_matches.value_of("NAME").unwrap();
-            let unfinished = get_unfinished_task(task_name, &conn);
-            if unfinished.len() > 0 {
-                println!(
-                    "{} task {} already started_at {}",
-                    Red.paint("ERROR:"),
-                    Cyan.paint(task_name),
-                    Red.paint(utc_ts_to_local_datetime(unfinished[0].started_at)),
-                );
-                std::process::exit(1);
-            }
-            let new_task = new_task(task_name);
-            diesel::insert_into(table)
-                .values(&new_task)
-                .execute(&conn)
-                .unwrap();
-            write_tab_written_message(format!(
-                "{}\n{}\t{}",
-                Cyan.paint("name\tstarted at"),
-                task_name,
-                Green.paint(utc_ts_to_local_datetime(new_task.started_at)),
-            ));
+            match puncher.punch_in(task_name.to_owned()) {
+                Ok(timestamp) => {
+                    write_tab_written_message(format!(
+                        "{}\n{}\t{}",
+                        Cyan.paint("name\tstarted at"),
+                        task_name,
+                        Green.paint(utc_ts_to_local_datetime(timestamp)),
+                    ));
+                }
+                Err(err) => {
+                    println!("{} {}", Red.paint("ERROR:"), Cyan.paint(err),);
+                    std::process::exit(1);
+                }
+            };
         }
         Some(("out", sub_matches)) => {
             let task_name = sub_matches.value_of("NAME").unwrap();
+
             let existing = get_unfinished_task(task_name, &conn);
             if existing.len() == 0 {
                 println!(
