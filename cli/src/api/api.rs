@@ -63,3 +63,27 @@ pub fn start_task(
         Err(err) => Err(err.to_string()),
     }
 }
+
+pub fn finish_task(
+    api_endpoint: String,
+    access_token: String,
+    task_name: String,
+) -> std::result::Result<APITaskInfo, String> {
+    let res = blocking::Client::new()
+        .post(api_endpoint)
+        .json(&TaskInfoPayload { name: task_name })
+        .header("Authorization", format!("Bearer {}", access_token))
+        .send();
+    match res {
+        Ok(resp) => match resp.status() {
+            StatusCode::OK => resp
+                .json::<APITaskInfo>()
+                .map_err(|e| format!("failed to parse the response: {}", e)),
+            _ => match resp.text() {
+                Ok(err_msg) => Err(err_msg),
+                Err(err) => Err(format!("failed to parse the response: {}", err)),
+            },
+        },
+        Err(err) => Err(err.to_string()),
+    }
+}

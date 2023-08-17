@@ -93,28 +93,23 @@ fn main() -> Result<(), std::io::Error> {
         }
         Some(("out", sub_matches)) => {
             let task_name = sub_matches.value_of("NAME").unwrap();
-
-            let existing = get_unfinished_task(task_name, &conn);
-            if existing.len() == 0 {
-                println!(
-                    "{} no task in progress for {}",
-                    Red.paint("ERROR:"),
-                    Cyan.paint(task_name),
-                );
-                std::process::exit(1);
-            }
-            let finished_ts = get_ts().unwrap().as_secs() as i64;
-            diesel::update(table.find(existing[0].id))
-                .set(finished_at.eq(finished_ts))
-                .execute(&conn)
-                .unwrap();
-            write_tab_written_message(format!(
-                "{}\n{}\t{}\t{}",
-                Cyan.paint("name\tfinished at\ttime spent"),
-                task_name,
-                Green.paint(utc_ts_to_local_datetime(finished_ts)),
-                Yellow.paint(seconds_to_duration(finished_ts - existing[0].started_at)),
-            ));
+            match puncher.punch_out(task_name.to_owned()) {
+                Ok(task) => {
+                    // TODO: this needs better error handling
+                    let ts = task.finished_at.unwrap();
+                    write_tab_written_message(format!(
+                        "{}\n{}\t{}\t{}",
+                        Cyan.paint("name\tfinished at\ttime spent"),
+                        task_name,
+                        Green.paint(utc_ts_to_local_datetime(ts)),
+                        Yellow.paint(seconds_to_duration(ts - task.started_at)),
+                    ));
+                }
+                Err(err) => {
+                    println!("{} {}", Red.paint("ERROR:"), Cyan.paint(err),);
+                    std::process::exit(1);
+                }
+            };
         }
         Some(("cancel", sub_matches)) => {
             let task_name = sub_matches.value_of("NAME").unwrap();
