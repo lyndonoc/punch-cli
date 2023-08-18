@@ -1,6 +1,7 @@
 use diesel::prelude::*;
 use diesel::SqliteConnection;
 
+use crate::api::api::cancel_task;
 use crate::model::get_ts;
 use crate::model::Task;
 use crate::schema::tasks::finished_at;
@@ -85,7 +86,7 @@ where
             None => {
                 let mut existing = get_unfinished_task(task_name.as_str(), self.db_conn);
                 if existing.len() == 0 {
-                    return Err(String::from("{} no task in progress for {}"));
+                    return Err(String::from("no task in progress"));
                 }
                 let finished_ts = match get_ts() {
                     Ok(ts) => ts.as_secs() as i64,
@@ -100,6 +101,32 @@ where
                         old_task.finished_at = Some(finished_ts);
                         Ok(old_task)
                     }
+                    Err(err) => Err(format!("{}", err)),
+                };
+            }
+        }
+    }
+
+    pub fn cancel(&self, task_name: String) -> Result<(), String> {
+        match self.auth_manager.get_access_token() {
+            Some(token) => {
+                let api_resp = cancel_task(
+                    format!("{}/punch/cancel", self.configs.api_endpoint),
+                    token,
+                    task_name,
+                );
+                return match api_resp {
+                    Ok(_) => Ok(()),
+                    Err(err) => Err(format!("{}", err)),
+                };
+            }
+            None => {
+                let started = get_unfinished_task(task_name.as_str(), self.db_conn);
+                if started.len() == 0 {
+                    return Err(String::from("no task in progress"));
+                }
+                return match diesel::delete(table.find(started[0].id)).execute(self.db_conn) {
+                    Ok(_) => Ok(()),
                     Err(err) => Err(format!("{}", err)),
                 };
             }

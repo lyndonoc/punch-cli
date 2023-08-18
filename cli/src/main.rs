@@ -106,26 +106,22 @@ fn main() -> Result<(), std::io::Error> {
                     ));
                 }
                 Err(err) => {
-                    println!("{} {}", Red.paint("ERROR:"), Cyan.paint(err),);
+                    println!("{} {}", Red.paint("ERROR:"), Cyan.paint(err));
                     std::process::exit(1);
                 }
             };
         }
         Some(("cancel", sub_matches)) => {
             let task_name = sub_matches.value_of("NAME").unwrap();
-            let started = get_unfinished_task(task_name, &conn);
-            if started.len() == 0 {
-                println!(
-                    "{} no task in progress for {}",
-                    Red.paint("ERROR:"),
-                    Cyan.paint(task_name),
-                );
-                std::process::exit(1);
-            }
-            diesel::delete(table.find(started[0].id))
-                .execute(&conn)
-                .unwrap();
-            println!("cancelled {}", Cyan.paint(task_name));
+            match puncher.cancel(task_name.to_string()) {
+                Ok(_) => {
+                    println!("Cancelled {}", Cyan.paint(task_name));
+                }
+                Err(err) => {
+                    println!("{} {}", Red.paint("ERROR:"), Cyan.paint(err));
+                    std::process::exit(1);
+                }
+            };
         }
         Some(("list", _)) => {
             let tasks: Vec<AggregatedTask> = sql_query(
