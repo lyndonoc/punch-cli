@@ -13,6 +13,12 @@ pub struct BaseTaskInfo {
     name: String,
 }
 
+#[derive(Deserialize)]
+pub struct TimeFilterInfo {
+    pub since: Option<i64>,
+    pub until: Option<i64>,
+}
+
 pub async fn start_new_task(
     app_deps: web::Data<AppDeps>,
     token: web::ReqData<TokenPayload>,
@@ -130,21 +136,37 @@ pub async fn get_task(
     app_deps: web::Data<AppDeps>,
     token: web::ReqData<TokenPayload>,
     name: web::Path<String>,
+    ts_filter: web::Query<TimeFilterInfo>,
 ) -> impl Responder {
     let task_name = name.to_lowercase();
     let right_now = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
         Ok(n) => n.as_secs() as i64,
         Err(_) => return Err(PunchTaskError::InternalError),
     };
+    let since = match ts_filter.since {
+        Some(since_ts) => since_ts,
+        None => 0,
+    };
+    let until = match ts_filter.until {
+        Some(until) => until,
+        None => std::i64::MAX,
+    };
     let get_task_op = sqlx::query_as!(
         TaskModel,
         r#"
             SELECT *
             FROM tasks
-            WHERE name = $1 AND user_github_id = $2;
+            WHERE 
+            name = $1 AND 
+            user_github_id = $2 AND
+            started_at <= $3 AND
+            (finished_at IS NULL OR finished_at >= $4)
+            ORDER BY started_at ASC;
             "#,
         task_name,
         token.user.id.to_string(),
+        until,
+        since,
     )
     .fetch_all(&app_deps.db_pool)
     .await;

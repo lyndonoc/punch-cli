@@ -6,8 +6,8 @@ use actix_web_httpauth::{
     },
     middleware::HttpAuthentication,
 };
-use std::env;
 use sqlx::postgres::PgPoolOptions;
+use std::env;
 
 pub mod api;
 pub mod configs;
@@ -20,7 +20,7 @@ use crate::api::gh::TokenPayload;
 use crate::configs::fetch_configs;
 use crate::routes::{
     auth::{client_id, login, verify},
-    punch::{cancel_task, finish_task, start_new_task, get_task}
+    punch::{cancel_task, finish_task, get_task, start_new_task},
 };
 use crate::state::AppDeps;
 use crate::utils::jwt::verify_user_jwt;
@@ -53,12 +53,13 @@ async fn main() -> std::io::Result<()> {
     let db_pool = match PgPoolOptions::new()
         .max_connections(10)
         .connect(&configs.database_url)
-        .await {
-            Ok(pool) => { pool }
-            Err(_) => {
-                std::process::exit(1);
-            }
-        };
+        .await
+    {
+        Ok(pool) => pool,
+        Err(_) => {
+            std::process::exit(1);
+        }
+    };
     HttpServer::new(move || {
         let bearer_middleware = HttpAuthentication::bearer(auth_validator);
 
@@ -72,7 +73,10 @@ async fn main() -> std::io::Result<()> {
                 web::scope("/auth")
                     .route("/client_id", web::get().to(client_id))
                     .route("/login", web::post().to(login))
-                    .route("/verify", web::post().to(verify).wrap(bearer_middleware.clone())),
+                    .route(
+                        "/verify",
+                        web::post().to(verify).wrap(bearer_middleware.clone()),
+                    ),
             )
             .service(
                 web::scope("/punch")
