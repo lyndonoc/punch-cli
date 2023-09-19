@@ -19,6 +19,13 @@ pub struct APITaskInfo {
     pub finished_at: Option<i64>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct APITaskStat {
+    pub name: String,
+    pub status: String,
+    pub duration: i64,
+}
+
 pub fn fetch_access_token(api_endpoint: String, access_token: &String) -> String {
     let res = blocking::Client::new()
         .post(api_endpoint)
@@ -101,6 +108,28 @@ pub fn cancel_task(
     match res {
         Ok(resp) => match resp.status() {
             StatusCode::NO_CONTENT => Ok(()),
+            _ => match resp.text() {
+                Ok(err_msg) => Err(err_msg),
+                Err(err) => Err(format!("failed to parse the response: {}", err)),
+            },
+        },
+        Err(err) => Err(err.to_string()),
+    }
+}
+
+pub fn get_task(
+    api_endpoint: String,
+    access_token: String,
+) -> std::result::Result<APITaskStat, String> {
+    let res = blocking::Client::new()
+        .get(api_endpoint)
+        .header("Authorization", format!("Bearer {}", access_token))
+        .send();
+    match res {
+        Ok(resp) => match resp.status() {
+            StatusCode::OK => resp
+                .json::<APITaskStat>()
+                .map_err(|e| format!("failed to parse the response: {}", e)),
             _ => match resp.text() {
                 Ok(err_msg) => Err(err_msg),
                 Err(err) => Err(format!("failed to parse the response: {}", err)),

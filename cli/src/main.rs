@@ -15,7 +15,6 @@ pub mod utils;
 
 use crate::db::create_connection;
 use crate::model::*;
-use crate::schema::tasks::{finished_at, name, started_at, table};
 use crate::utils::{seconds_to_duration, utc_ts_to_local_datetime, write_tab_written_message};
 
 use crate::auth::AuthManager;
@@ -29,7 +28,6 @@ use dateparser;
 use diesel::prelude::*;
 use diesel::sql_query;
 use diesel_migrations::embed_migrations;
-use std::cmp;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 embed_migrations!("./migrations");
@@ -195,53 +193,23 @@ fn main() -> Result<(), std::io::Error> {
             };
             let since = since_dt.signed_duration_since(epoch_dt).num_seconds();
             let until = until_dt.signed_duration_since(epoch_dt).num_seconds();
-            let tasks = table
-                .filter(name.eq(task_name))
-                .filter(finished_at.ge(since))
-                .or_filter(finished_at.is_null())
-                .filter(started_at.le(until))
-                .order(started_at.asc())
-                .load::<Task>(&conn)
-                .unwrap();
-            if tasks.len() == 0 {
-                println!(
-                    "{} no task found for {}",
-                    Red.paint("ERROR:"),
-                    Cyan.paint(task_name),
-                );
-                std::process::exit(1);
+            match puncher.get(task_name.to_owned(), since, until) {
+                Ok(stat) => write_tab_written_message(format!(
+                    "{}\n{}\t({})\t{}",
+                    Cyan.paint("name\tstatus\ttime spent"),
+                    stat.name,
+                    if stat.status == "in progress" {
+                        Red.paint("in progress")
+                    } else {
+                        Green.paint("complete")
+                    },
+                    Yellow.paint(seconds_to_duration(stat.duration)),
+                )),
+                Err(err) => {
+                    println!("{} {}", Red.paint("ERROR:"), Cyan.paint(err));
+                    std::process::exit(1);
+                }
             }
-            let sum: i64 = tasks
-                .iter()
-                .map(|task| match task.finished_at {
-                    Some(fts) => cmp::min(fts, until) - cmp::max(task.started_at, since),
-                    None => until - cmp::max(task.started_at, since),
-                })
-                .fold(0, |a, b| a + b);
-            write_tab_written_message(format!(
-                "{}\n{}\t({})\t{}\t{}\t{}",
-                Cyan.paint("name\tstatus\ttime spent\tfrom\tto"),
-                task_name,
-                if tasks.iter().any(|task| task.finished_at.is_none()) {
-                    Red.paint("in progress")
-                } else {
-                    Green.paint("complete")
-                },
-                Yellow.paint(seconds_to_duration(sum)),
-                Purple.paint(utc_ts_to_local_datetime(if tasks.len() > 0 {
-                    cmp::max(since, tasks[0].started_at)
-                } else {
-                    since
-                })),
-                Purple.paint(utc_ts_to_local_datetime(if tasks.len() > 0 {
-                    match tasks[tasks.len() - 1].finished_at {
-                        Some(fa) => cmp::min(until, fa),
-                        None => until,
-                    }
-                } else {
-                    until
-                }),)
-            ));
         }
         _ => unreachable!("Exhausted list of subcommands and subcommand_required prevents `None`"),
     }
