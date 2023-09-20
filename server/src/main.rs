@@ -6,6 +6,7 @@ use actix_web_httpauth::{
     },
     middleware::HttpAuthentication,
 };
+use routes::punch::list_tasks;
 use sqlx::postgres::PgPoolOptions;
 use std::env;
 
@@ -84,6 +85,7 @@ async fn main() -> std::io::Result<()> {
                     .route("/out", web::post().to(finish_task))
                     .route("/cancel", web::post().to(cancel_task))
                     .route("/get/{task_name}", web::get().to(get_task))
+                    .route("/list", web::get().to(list_tasks))
                     .wrap(bearer_middleware.clone()),
             )
     })

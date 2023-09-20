@@ -1,10 +1,10 @@
 use actix_web::{web, HttpResponse, Responder};
 use std::time::SystemTime;
 
-use ::serde::Deserialize;
+use serde::Deserialize;
 
 use crate::api::gh::TokenPayload;
-use crate::models::tasks::{tasks_to_task_report, TaskModel};
+use crate::models::tasks::{tasks_to_task_report, TaskListModel, TaskModel};
 use crate::state::AppDeps;
 use crate::utils::errors::PunchTaskError;
 
@@ -177,6 +177,48 @@ pub async fn get_task(
             }
             let task_report = tasks_to_task_report(tasks, task_name, right_now);
             return Ok(HttpResponse::Ok().json(task_report));
+        }
+        Err(_) => {
+            return Err(PunchTaskError::InternalError);
+        }
+    }
+}
+
+pub async fn list_tasks(
+    app_deps: web::Data<AppDeps>,
+    token: web::ReqData<TokenPayload>,
+) -> impl Responder {
+    let task_rows = sqlx::query!(
+        r#"
+            SELECT
+                name,
+                MAX(started_at) as started_at,
+                CASE WHEN count(*) - count(finished_at) > 0 THEN NULL ELSE MAX(finished_at) END as finished_at,
+                SUM(finished_at - started_at) as duration
+            FROM
+                tasks
+            WHERE
+                user_github_id = $1
+            GROUP BY
+                name;
+            "#,
+            token.user.id.to_string()
+    )
+    .fetch_all(&app_deps.db_pool)
+    .await;
+
+    match task_rows {
+        Ok(rows) => {
+            let tasks: Vec<TaskListModel> = rows
+                .iter()
+                .map(|task_row| TaskListModel {
+                    name: task_row.name.to_owned(),
+                    duration: task_row.duration.to_owned(),
+                    started_at: task_row.started_at,
+                    finished_at: task_row.finished_at,
+                })
+                .collect();
+            return Ok(HttpResponse::Ok().json(serde_json::json!(tasks)));
         }
         Err(_) => {
             return Err(PunchTaskError::InternalError);

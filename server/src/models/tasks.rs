@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use sqlx::types::BigDecimal;
 use sqlx::FromRow;
 
 #[derive(Debug, Deserialize, Serialize, FromRow)]
@@ -17,7 +18,7 @@ impl TaskModel {
             "name": self.name.to_owned(),
             "started_at": self.started_at.to_owned(),
             "finished_at": self.finished_at.to_owned(),
-        })
+        });
     }
 }
 
@@ -36,5 +37,13 @@ pub fn tasks_to_task_report(tasks: Vec<TaskModel>, name: String, right_now: i64)
         "name": name.to_owned(),
         "status": if is_in_progress { "in progress" } else { "complete "},
         "duration": duration_sum,
-    })
+    });
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TaskListModel {
+    pub name: String,
+    pub duration: Option<BigDecimal>,
+    pub started_at: Option<i64>,
+    pub finished_at: Option<i64>,
 }

@@ -398,6 +398,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 
 [[package]]
+name = "bigdecimal"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a6773ddc0eafc0e509fb60e48dff7f450f8e674a0686ae8605e8d9901bd5eefa"
+dependencies = [
+ "num-bigint",
+ "num-integer",
+ "num-traits",
+ "serde",
+]
+
+[[package]]
 name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1886,6 +1898,7 @@ dependencies = [
  "actix-web",
  "actix-web-httpauth",
  "base64 0.21.0",
+ "bigdecimal",
  "derive_more",
  "jsonwebtoken",
  "reqwest",
@@ -2032,6 +2045,7 @@ dependencies = [
  "async-io",
  "async-std",
  "atoi",
+ "bigdecimal",
  "byteorder",
  "bytes",
  "crc",
@@ -2110,6 +2124,7 @@ checksum = "8ca69bf415b93b60b80dc8fda3cb4ef52b2336614d8da2de5456cc942a110482"
 dependencies = [
  "atoi",
  "base64 0.21.0",
+ "bigdecimal",
  "bitflags 2.3.3",
  "byteorder",
  "bytes",
@@ -2152,6 +2167,7 @@ checksum = "a0db2df1b8731c3651e204629dd55e52adbae0462fa1bdcbed56a2302c18181e"
 dependencies = [
  "atoi",
  "base64 0.21.0",
+ "bigdecimal",
  "bitflags 2.3.3",
  "byteorder",
  "crc",
@@ -2169,6 +2185,7 @@ dependencies = [
  "log",
  "md-5",
  "memchr",
+ "num-bigint",
  "once_cell",
  "rand",
  "serde",
