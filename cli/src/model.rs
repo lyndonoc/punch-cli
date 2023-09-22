@@ -27,9 +27,10 @@ pub struct NewTask<'a> {
 pub struct AggregatedTask {
     pub name: String,
     pub started_at: i64,
-    pub finished_at: Option<i64>,
     #[sql_type = "Nullable<BigInt>"]
-    pub duration: Option<i64>,
+    pub finished_at: Option<i64>,
+    #[sql_type = "BigInt"]
+    pub duration: i64,
 }
 
 pub fn new_task(task_name: &str) -> NewTask {

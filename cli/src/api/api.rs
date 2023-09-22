@@ -26,6 +26,14 @@ pub struct APITaskStat {
     pub duration: i64,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct APITaskListItem {
+    pub name: String,
+    pub duration: i64,
+    pub started_at: i64,
+    pub finished_at: Option<i64>,
+}
+
 pub fn fetch_access_token(api_endpoint: String, access_token: &String) -> String {
     let res = blocking::Client::new()
         .post(api_endpoint)
@@ -129,6 +137,28 @@ pub fn get_task(
         Ok(resp) => match resp.status() {
             StatusCode::OK => resp
                 .json::<APITaskStat>()
+                .map_err(|e| format!("failed to parse the response: {}", e)),
+            _ => match resp.text() {
+                Ok(err_msg) => Err(err_msg),
+                Err(err) => Err(format!("failed to parse the response: {}", err)),
+            },
+        },
+        Err(err) => Err(err.to_string()),
+    }
+}
+
+pub fn list_task(
+    api_endpoint: &str,
+    access_token: &str,
+) -> std::result::Result<Vec<APITaskListItem>, String> {
+    let res = blocking::Client::new()
+        .get(api_endpoint)
+        .header("Authorization", format!("Bearer {}", access_token))
+        .send();
+    match res {
+        Ok(resp) => match resp.status() {
+            StatusCode::OK => resp
+                .json::<Vec<APITaskListItem>>()
                 .map_err(|e| format!("failed to parse the response: {}", e)),
             _ => match resp.text() {
                 Ok(err_msg) => Err(err_msg),

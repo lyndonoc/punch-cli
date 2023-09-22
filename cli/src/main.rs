@@ -25,8 +25,6 @@ use ansi_term::Colour::{Cyan, Green, Purple, Red, Yellow};
 use chrono::{DateTime, Utc};
 use clap::{arg, Command};
 use dateparser;
-use diesel::prelude::*;
-use diesel::sql_query;
 use diesel_migrations::embed_migrations;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -121,48 +119,50 @@ fn main() -> Result<(), std::io::Error> {
                 }
             };
         }
-        Some(("list", _)) => {
-            let tasks: Vec<AggregatedTask> = sql_query(
-                "SELECT name, max(started_at) as started_at, case when count(*) - count(finished_at) > 0 then null else max(finished_at) end as finished_at, sum(finished_at - started_at) as duration FROM tasks GROUP BY name;",
-            )
-                .load(&conn)
-                .unwrap();
-            write_tab_written_message(
-                tasks
-                    .iter()
-                    .map(|task| {
-                        let duration =
-                            Purple.paint(seconds_to_duration(task.duration.unwrap_or_default()));
-                        return match task.finished_at {
-                            Some(_) => {
-                                format!(
-                                    "{}\t({})\t{}\t{}",
-                                    task.name,
-                                    Green.paint("complete"),
-                                    String::new(),
-                                    duration,
-                                )
-                            }
-                            None => {
-                                let now_dt = get_ts().unwrap();
-                                let now_ts = now_dt.as_secs() as i64;
-                                format!(
-                                    "{}\t({})\t{}\t{}",
-                                    task.name,
-                                    Red.paint("in progress"),
-                                    Yellow.paint(seconds_to_duration(now_ts - task.started_at)),
-                                    duration,
-                                )
-                            }
-                        };
-                    })
-                    .fold(
-                        Cyan.paint("name\tstatus\tcurrent total\ttotal (minus current total)\n")
+        Some(("list", _)) => match puncher.list() {
+            Ok(tasks) => {
+                write_tab_written_message(
+                    tasks
+                        .iter()
+                        .map(|task| {
+                            let duration = Purple.paint(seconds_to_duration(task.duration));
+                            return match task.finished_at {
+                                Some(_) => {
+                                    format!(
+                                        "{}\t({})\t{}\t{}",
+                                        task.name,
+                                        Green.paint("complete"),
+                                        String::new(),
+                                        duration,
+                                    )
+                                }
+                                None => {
+                                    let now_dt = get_ts().unwrap();
+                                    let now_ts = now_dt.as_secs() as i64;
+                                    format!(
+                                        "{}\t({})\t{}\t{}",
+                                        task.name,
+                                        Red.paint("in progress"),
+                                        Yellow.paint(seconds_to_duration(now_ts - task.started_at)),
+                                        duration,
+                                    )
+                                }
+                            };
+                        })
+                        .fold(
+                            Cyan.paint(
+                                "name\tstatus\tcurrent total\ttotal (minus current total)\n",
+                            )
                             .to_string(),
-                        |a, b| a + &b + "\n",
-                    ),
-            );
-        }
+                            |a, b| a + &b + "\n",
+                        ),
+                );
+            }
+            Err(err) => {
+                println!("{} {}", Red.paint("ERROR:"), Cyan.paint(err));
+                std::process::exit(1);
+            }
+        },
         Some(("get", sub_matches)) => {
             if !sub_matches.is_present("NAME") {
                 panic!("you must provide the task name")

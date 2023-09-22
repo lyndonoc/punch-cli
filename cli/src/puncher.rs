@@ -1,20 +1,29 @@
 use diesel::prelude::*;
+use diesel::sql_query;
 use diesel::SqliteConnection;
 
-use crate::api::api::cancel_task;
-use crate::api::api::get_task;
+use crate::api::api::{cancel_task, get_task, list_task, start_task};
 use crate::model::get_ts;
+use crate::model::AggregatedTask;
 use crate::model::Task;
 use crate::schema::tasks;
 use crate::schema::tasks::{finished_at, name, started_at, table};
 use crate::{
-    api::api::start_task,
     auth::AuthManager,
     configs::AppConfigs,
     keyring::SecretsManager,
     model::{get_unfinished_task, new_task},
 };
 use std::cmp;
+
+pub struct TaskListItem {
+    pub name: String,
+    pub duration: i64,
+    pub started_at: i64,
+    pub finished_at: Option<i64>,
+}
+
+pub type TaskList = Vec<TaskListItem>;
 
 pub struct TaskStat {
     pub name: String,
@@ -197,6 +206,45 @@ where
                     }
                     Err(err) => Err(format!("{}", err)),
                 }
+            }
+        }
+    }
+
+    pub fn list(&self) -> Result<Vec<TaskListItem>, String> {
+        match self.auth_manager.get_access_token() {
+            Some(token) => {
+                let endpoint = format!("{}/punch/list", self.configs.api_endpoint,);
+                let api_resp = list_task(&endpoint, &token);
+                return match api_resp {
+                    Ok(task_list) => Ok(task_list
+                        .iter()
+                        .map(|item| TaskListItem {
+                            name: item.name.to_owned(),
+                            started_at: item.started_at,
+                            finished_at: item.finished_at,
+                            duration: item.duration,
+                        })
+                        .collect()),
+                    Err(err) => Err(format!("{}", err)),
+                };
+            }
+            None => {
+                let sqlite_op = sql_query(
+                    "SELECT name, max(started_at) as started_at, case when count(*) - count(finished_at) > 0 then null else max(finished_at) end as finished_at, sum(finished_at - started_at) as duration FROM tasks GROUP BY name;",
+                )
+                    .load::<AggregatedTask>(self.db_conn);
+                return match sqlite_op {
+                    Ok(tasks) => Ok(tasks
+                        .iter()
+                        .map(|task| TaskListItem {
+                            name: task.name.to_owned(),
+                            started_at: task.started_at,
+                            finished_at: task.finished_at,
+                            duration: task.duration,
+                        })
+                        .collect()),
+                    Err(err) => Err(format!("{}", err)),
+                };
             }
         }
     }
