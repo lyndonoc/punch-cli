@@ -1,5 +1,5 @@
+use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
-use sqlx::types::BigDecimal;
 use sqlx::FromRow;
 
 #[derive(Debug, Deserialize, Serialize, FromRow)]
@@ -40,10 +40,18 @@ pub fn tasks_to_task_report(tasks: Vec<TaskModel>, name: String, right_now: i64)
     });
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, FromRow)]
 pub struct TaskListModel {
     pub name: String,
-    pub duration: Option<BigDecimal>,
-    pub started_at: Option<i64>,
+    pub duration: BigDecimal,
+    pub started_at: i64,
+    pub finished_at: Option<i64>,
+}
+
+#[derive(Debug, Deserialize, Serialize, FromRow)]
+pub struct TaskListModelForResponse {
+    pub name: String,
+    pub duration: i64,
+    pub started_at: i64,
     pub finished_at: Option<i64>,
 }

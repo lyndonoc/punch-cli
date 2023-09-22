@@ -4,9 +4,12 @@ use std::time::SystemTime;
 use serde::Deserialize;
 
 use crate::api::gh::TokenPayload;
-use crate::models::tasks::{tasks_to_task_report, TaskListModel, TaskModel};
+use crate::models::tasks::{
+    tasks_to_task_report, TaskListModel, TaskListModelForResponse, TaskModel,
+};
 use crate::state::AppDeps;
 use crate::utils::errors::PunchTaskError;
+use bigdecimal::ToPrimitive;
 
 #[derive(Deserialize)]
 pub struct BaseTaskInfo {
@@ -188,7 +191,7 @@ pub async fn list_tasks(
     app_deps: web::Data<AppDeps>,
     token: web::ReqData<TokenPayload>,
 ) -> impl Responder {
-    let task_rows = sqlx::query!(
+    let task_rows = sqlx::query_as::<_, TaskListModel>(
         r#"
             SELECT
                 name,
@@ -201,19 +204,18 @@ pub async fn list_tasks(
                 user_github_id = $1
             GROUP BY
                 name;
-            "#,
-            token.user.id.to_string()
+            "#
     )
+    .bind(token.user.id.to_string())
     .fetch_all(&app_deps.db_pool)
     .await;
-
     match task_rows {
         Ok(rows) => {
-            let tasks: Vec<TaskListModel> = rows
+            let tasks: Vec<TaskListModelForResponse> = rows
                 .iter()
-                .map(|task_row| TaskListModel {
+                .map(|task_row| TaskListModelForResponse {
                     name: task_row.name.to_owned(),
-                    duration: task_row.duration.to_owned(),
+                    duration: task_row.duration.to_i64().unwrap_or(0),
                     started_at: task_row.started_at,
                     finished_at: task_row.finished_at,
                 })
