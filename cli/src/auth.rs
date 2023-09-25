@@ -7,51 +7,42 @@ use crate::utils::SimpleError;
 
 pub struct AuthManager<'a, T: SecretsManager> {
     configs: &'a AppConfigs,
-    pub is_logged_in: bool,
-    keyring_manager: T,
+    keyring_manager: &'a T,
     token: Option<String>,
 }
 
-impl<T> AuthManager<'_, T>
+impl<'a, T> AuthManager<'a, T>
 where
     T: SecretsManager,
 {
-    pub fn new(configs: &AppConfigs, keyring_manager: T) -> AuthManager<T> {
-        AuthManager {
-            configs,
-            is_logged_in: false,
-            keyring_manager,
-            token: None,
+    pub fn new(configs: &'a AppConfigs, keyring_manager: &'a T) -> AuthManager<'a, T> {
+        match keyring_manager.retrieve_secrets() {
+            Ok(secret) => {
+                let endpoint = format!("{}/auth/verify", &configs.api_endpoint);
+                match verify_access_token(&endpoint, &secret) {
+                    Ok(is_verified) => AuthManager {
+                        configs,
+                        keyring_manager,
+                        token: if is_verified { Some(secret) } else { None },
+                    },
+                    Err(_) => AuthManager {
+                        configs,
+                        keyring_manager,
+                        token: None,
+                    },
+                }
+            }
+            Err(_) => AuthManager {
+                configs,
+                keyring_manager,
+                token: None,
+            },
         }
     }
 
+    // TODO: change the return type to &str
     pub fn get_access_token(&self) -> Option<String> {
         self.token.clone()
-    }
-
-    pub fn get_is_logged_in(&self) -> bool {
-        self.is_logged_in
-    }
-
-    pub fn initialize(&mut self) {
-        let mut token = self
-            .keyring_manager
-            .retrieve_secrets()
-            .unwrap_or_else(|_| String::from(""));
-        if token == "" {
-            token = self.login()
-        }
-        match self.verify_login(&token) {
-            Ok(_) => {
-                self.keyring_manager.save_secrets(&token);
-                self.token = Some(token);
-                self.is_logged_in = true;
-            }
-            Err(err) => {
-                self.keyring_manager.remove_secret();
-                panic!("{}", err);
-            }
-        };
     }
 
     pub fn login(&self) -> String {
@@ -65,11 +56,9 @@ where
         )
     }
 
-    fn verify_login(&self, access_token: &str) -> Result<(), SimpleError> {
-        return match verify_access_token(
-            format!("{}/auth/verify", &self.configs.api_endpoint),
-            access_token,
-        ) {
+    pub fn verify_login(&self, access_token: &str) -> Result<(), SimpleError> {
+        let endpoint = format!("{}/auth/verify", &self.configs.api_endpoint);
+        return match verify_access_token(&endpoint, access_token) {
             Ok(is_verified) => {
                 if !is_verified {
                     self.keyring_manager.remove_secret();

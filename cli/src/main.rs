@@ -19,7 +19,7 @@ use crate::utils::{seconds_to_duration, utc_ts_to_local_datetime, write_tab_writ
 
 use crate::auth::AuthManager;
 use crate::configs::fetch_configs;
-use crate::keyring::new_key_ring_manager;
+use crate::keyring::{new_key_ring_manager, SecretsManager};
 use crate::puncher::Puncher;
 use ansi_term::Colour::{Cyan, Green, Purple, Red, Yellow};
 use chrono::{DateTime, Utc};
@@ -34,13 +34,19 @@ fn main() -> Result<(), std::io::Error> {
     let conn = create_connection().unwrap();
     let cf = fetch_configs();
     let sm = new_key_ring_manager();
-    let mut am = AuthManager::new(&cf, sm);
-    am.initialize();
+    let am = AuthManager::new(&cf, &sm);
     let puncher = Puncher::new(&am, &cf, &conn);
 
     let matches = Command::new("Punch CLI")
         .subcommand_required(true)
         .arg_required_else_help(true)
+        .subcommand(Command::new("login").about("log in to the server using GitHub account"))
+        .subcommand(Command::new("logout").about("log out from the server"))
+        .subcommand(
+            Command::new("status")
+                .about("start a new task")
+                .arg(arg!([NAME])),
+        )
         .subcommand(
             Command::new("in")
                 .about("start a new task")
@@ -118,6 +124,24 @@ fn main() -> Result<(), std::io::Error> {
                     std::process::exit(1);
                 }
             };
+        }
+        Some(("login", _)) => {
+            let token = am.get_access_token().unwrap_or_else(|| am.login());
+            match am.verify_login(&token) {
+                Ok(_) => {
+                    sm.save_secrets(&token);
+                    println!("{}", Green.paint("successfully logged in"));
+                }
+                Err(err) => {
+                    sm.remove_secret();
+                    println!("{} {}", Red.paint("ERROR:"), Cyan.paint(err.message));
+                    std::process::exit(1);
+                }
+            };
+        }
+        Some(("logout", _)) => {
+            sm.remove_secret();
+            println!("{}", Green.paint("successfully logged out"));
         }
         Some(("list", _)) => match puncher.list() {
             Ok(tasks) => {

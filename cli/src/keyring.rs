@@ -1,4 +1,4 @@
-use keyring::{Entry, Result};
+use keyring::{Entry, Error, Result};
 
 pub trait SecretsManager {
     fn remove_secret(&self);
@@ -12,7 +12,15 @@ pub struct KeyRingManager {
 
 impl SecretsManager for KeyRingManager {
     fn remove_secret(&self) {
-        self.storage.delete_password().unwrap()
+        match self.storage.delete_password() {
+            Err(err) => match err {
+                Error::NoEntry => (),
+                _ => {
+                    panic!("{:?}", err);
+                }
+            },
+            _ => (),
+        };
     }
 
     fn retrieve_secrets(&self) -> Result<String> {
@@ -27,6 +35,6 @@ impl SecretsManager for KeyRingManager {
 }
 
 pub fn new_key_ring_manager() -> impl SecretsManager {
-    let storage = Entry::new("punch-cli", "session_info").expect("failed to read keyring wowza");
+    let storage = Entry::new("punch-cli", "session_info").expect("failed to read keyring");
     KeyRingManager { storage }
 }
