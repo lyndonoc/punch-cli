@@ -230,7 +230,7 @@ where
             }
             None => {
                 let sqlite_op = sql_query(
-                    "SELECT name, max(started_at) as started_at, case when count(*) - count(finished_at) > 0 then null else max(finished_at) end as finished_at, sum(finished_at - started_at) as duration FROM tasks GROUP BY name;",
+                    "SELECT name, max(started_at) as started_at, case when count(*) - count(finished_at) > 0 then null else max(finished_at) end as finished_at, coalesce(sum(finished_at - started_at), 0) as duration FROM tasks GROUP BY name;",
                 )
                     .load::<AggregatedTask>(self.db_conn);
                 return match sqlite_op {
