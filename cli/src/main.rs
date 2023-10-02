@@ -4,29 +4,30 @@ extern crate diesel;
 extern crate diesel_migrations;
 
 pub mod api;
-pub mod auth;
-pub mod configs;
-pub mod db;
-pub mod keyring;
-pub mod model;
+pub mod database;
+pub mod managers;
 pub mod puncher;
-pub mod schema;
 pub mod utils;
 
-use crate::db::create_connection;
-use crate::model::*;
-use crate::utils::{seconds_to_duration, utc_ts_to_local_datetime, write_tab_written_message};
+use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::auth::AuthManager;
-use crate::configs::fetch_configs;
-use crate::keyring::{new_key_ring_manager, SecretsManager};
-use crate::puncher::Puncher;
 use ansi_term::Colour::{Cyan, Green, Purple, Red, Yellow};
 use chrono::{DateTime, Utc};
 use clap::{arg, Command};
 use dateparser;
 use diesel_migrations::embed_migrations;
-use std::time::{SystemTime, UNIX_EPOCH};
+
+use crate::database::{database::create_connection, task::*};
+use crate::managers::{
+    auth::AuthManager,
+    configs::fetch_configs,
+    keyring::{new_key_ring_manager, SecretsManager},
+};
+use crate::puncher::Puncher;
+use crate::utils::{
+    clock::{seconds_to_duration, utc_ts_to_local_datetime},
+    printer::write_tab_written_message,
+};
 
 embed_migrations!("./migrations");
 

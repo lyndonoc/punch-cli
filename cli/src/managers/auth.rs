@@ -1,9 +1,10 @@
-use crate::keyring::SecretsManager;
+use super::{configs::AppConfigs, keyring::SecretsManager};
 
-use crate::api::api::{fetch_access_token, verify_access_token};
-use crate::api::github::{fetch_gh_client_id, fetch_gh_login_info, prompt_and_fetch_gh_tokens};
-use crate::configs::AppConfigs;
-use crate::utils::SimpleError;
+use crate::api::{
+    api::{fetch_access_token, verify_access_token},
+    github::{fetch_gh_client_id, fetch_gh_login_info, prompt_and_fetch_gh_tokens},
+};
+use crate::utils::errors::SimpleError;
 
 pub struct AuthManager<'a, T: SecretsManager> {
     configs: &'a AppConfigs,
@@ -50,10 +51,8 @@ where
             fetch_gh_client_id(&self.configs.api_endpoint, &self.configs.gh_auth_scope);
         let login_info = fetch_gh_login_info(&client_id_info);
         let user = prompt_and_fetch_gh_tokens(&client_id_info, &login_info);
-        fetch_access_token(
-            String::from(format!("{}/auth/login", &self.configs.api_endpoint)),
-            &user.access_token,
-        )
+        let token_endpoint = format!("{}/auth/login", &self.configs.api_endpoint);
+        fetch_access_token(&token_endpoint, &user.access_token)
     }
 
     pub fn verify_login(&self, access_token: &str) -> Result<(), SimpleError> {

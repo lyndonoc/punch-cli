@@ -2,13 +2,13 @@ use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use std::{thread, time};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct LoginPayload {
     pub client_id: String,
     scope: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct LoginResponse {
     pub device_code: String,
     pub expires_in: u64,
@@ -17,7 +17,7 @@ pub struct LoginResponse {
     pub verification_uri: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct GHLoginPayload {
     pub device_code: String,
     pub expires_in: u64,
@@ -26,21 +26,21 @@ pub struct GHLoginPayload {
     pub verification_uri: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct AccessTokenPayload {
     client_id: String,
     device_code: String,
     grant_type: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct TokenResponse {
     pub access_token: String,
     token_type: String,
     scope: String,
 }
 
-pub fn fetch_gh_client_id(api_endpoint: &String, scope: &String) -> LoginPayload {
+pub fn fetch_gh_client_id(api_endpoint: &str, scope: &str) -> LoginPayload {
     let res = reqwest::blocking::get(format!("{}/auth/client_id", api_endpoint))
         .expect("failed to fetch client id from the server");
     let client_id = res
@@ -48,7 +48,7 @@ pub fn fetch_gh_client_id(api_endpoint: &String, scope: &String) -> LoginPayload
         .expect("failed to parse client id from the response");
     LoginPayload {
         client_id,
-        scope: scope.clone(),
+        scope: scope.to_string(),
     }
 }
 
@@ -67,8 +67,8 @@ pub fn fetch_gh_login_info(payload: &LoginPayload) -> LoginResponse {
             user_code: parsed.user_code,
             verification_uri: parsed.verification_uri,
         },
-        Err(_) => {
-            panic!("failed to attempt to login to GitHub");
+        Err(err) => {
+            panic!("failed to attempt to login to GitHub: {:?}", err);
         }
     }
 }

@@ -1,13 +1,12 @@
-use crate::schema::tasks;
-use crate::schema::tasks::{finished_at, name};
+use std::time::{Duration, SystemTime, SystemTimeError, UNIX_EPOCH};
 
 use diesel::prelude::*;
 use diesel::sql_types::{BigInt, Nullable};
 use diesel::sqlite::SqliteConnection;
 
-use std::time::{Duration, SystemTime, SystemTimeError, UNIX_EPOCH};
+use super::schema::tasks::{self, finished_at, name};
 
-#[derive(Insertable, Queryable, Debug)]
+#[derive(Insertable, Queryable)]
 pub struct Task {
     pub id: i32,
     pub name: String,
@@ -15,14 +14,14 @@ pub struct Task {
     pub finished_at: Option<i64>,
 }
 
-#[derive(Insertable, Debug)]
+#[derive(Insertable)]
 #[table_name = "tasks"]
-pub struct NewTask<'a> {
-    pub name: &'a str,
+pub struct NewTask {
+    pub name: String,
     pub started_at: i64,
 }
 
-#[derive(QueryableByName, Debug)]
+#[derive(QueryableByName)]
 #[table_name = "tasks"]
 pub struct AggregatedTask {
     pub name: String,
@@ -31,13 +30,6 @@ pub struct AggregatedTask {
     pub finished_at: Option<i64>,
     #[sql_type = "BigInt"]
     pub duration: i64,
-}
-
-pub fn new_task(task_name: &str) -> NewTask {
-    NewTask {
-        name: task_name,
-        started_at: get_ts().unwrap().as_secs() as i64,
-    }
 }
 
 pub fn get_unfinished_task(task_name: &str, conn: &SqliteConnection) -> Vec<Task> {

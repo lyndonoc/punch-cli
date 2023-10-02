@@ -1,20 +1,15 @@
+use std::cmp;
+
 use diesel::prelude::*;
 use diesel::sql_query;
 use diesel::SqliteConnection;
 
 use crate::api::api::{cancel_task, get_task, list_task, start_task};
-use crate::model::get_ts;
-use crate::model::AggregatedTask;
-use crate::model::Task;
-use crate::schema::tasks;
-use crate::schema::tasks::{finished_at, name, started_at, table};
-use crate::{
-    auth::AuthManager,
-    configs::AppConfigs,
-    keyring::SecretsManager,
-    model::{get_unfinished_task, new_task},
+use crate::database::{
+    schema::tasks::{self, finished_at, name, started_at, table},
+    task::{get_ts, get_unfinished_task, AggregatedTask, NewTask, Task},
 };
-use std::cmp;
+use crate::managers::{auth::AuthManager, configs::AppConfigs, keyring::SecretsManager};
 
 pub struct TaskListItem {
     pub name: String,
@@ -52,6 +47,7 @@ where
             db_conn,
         }
     }
+
     pub fn punch_in(&self, task_name: String) -> Result<i64, String> {
         match self.auth_manager.get_access_token() {
             Some(token) => {
@@ -70,7 +66,10 @@ where
                 if unfinished.len() > 0 {
                     return Err(String::from("the task is already in progress"));
                 }
-                let new_task = new_task(task_name.as_str());
+                let new_task = NewTask {
+                    name: task_name,
+                    started_at: get_ts().unwrap().as_secs() as i64,
+                };
                 return match diesel::insert_into(table)
                     .values(&new_task)
                     .execute(self.db_conn)

@@ -1,17 +1,17 @@
 use reqwest::{blocking, Result, StatusCode};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct FetchAccessTokenPayload {
     access_token: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct TaskInfoPayload {
     name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct APITaskInfo {
     pub id: i64,
     pub name: String,
@@ -19,14 +19,14 @@ pub struct APITaskInfo {
     pub finished_at: Option<i64>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct APITaskStat {
     pub name: String,
     pub status: String,
     pub duration: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct APITaskListItem {
     pub name: String,
     pub duration: i64,
@@ -34,11 +34,11 @@ pub struct APITaskListItem {
     pub finished_at: Option<i64>,
 }
 
-pub fn fetch_access_token(api_endpoint: String, access_token: &String) -> String {
+pub fn fetch_access_token(api_endpoint: &str, access_token: &str) -> String {
     let res = blocking::Client::new()
         .post(api_endpoint)
         .json(&FetchAccessTokenPayload {
-            access_token: access_token.clone(),
+            access_token: access_token.to_string(),
         })
         .send()
         .expect("failed to fetch API access token");
@@ -46,7 +46,7 @@ pub fn fetch_access_token(api_endpoint: String, access_token: &String) -> String
         .expect("failed to parse API access token response")
 }
 
-pub fn verify_access_token(api_endpoint: String, access_token: &str) -> Result<bool> {
+pub fn verify_access_token(api_endpoint: &str, access_token: &str) -> Result<bool> {
     let res = blocking::Client::new()
         .post(api_endpoint)
         .header("Authorization", format!("Bearer {}", access_token))
