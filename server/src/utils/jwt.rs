@@ -1,12 +1,13 @@
+use std::ops::Add;
+use std::time::{Duration, SystemTime};
+
 use jsonwebtoken::{
     decode, encode, errors::Result, Algorithm, DecodingKey, EncodingKey, Header, TokenData,
     Validation,
 };
 use serde::{Deserialize, Serialize};
-use std::ops::Add;
-use std::time::{Duration, SystemTime};
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Deserialize, PartialEq, Serialize)]
 pub struct BaseJWTClaims<T> {
     pub claim: T,
     iat: u64,

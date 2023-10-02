@@ -1,3 +1,10 @@
+pub mod api;
+pub mod models;
+pub mod routes;
+pub mod utils;
+
+use std::env;
+
 use actix_web::{dev::ServiceRequest, error::Error, web, App, HttpMessage, HttpServer, Responder};
 use actix_web_httpauth::{
     extractors::{
@@ -6,25 +13,14 @@ use actix_web_httpauth::{
     },
     middleware::HttpAuthentication,
 };
-use routes::{auth::status, punch::list_tasks};
 use sqlx::postgres::PgPoolOptions;
-use std::env;
-
-pub mod api;
-pub mod configs;
-pub mod models;
-pub mod routes;
-pub mod state;
-pub mod utils;
 
 use crate::api::gh::TokenPayload;
-use crate::configs::fetch_configs;
 use crate::routes::{
-    auth::{client_id, login, verify},
-    punch::{cancel_task, finish_task, get_task, start_new_task},
+    auth::{client_id, login, status, verify},
+    punch::{cancel_task, finish_task, get_task, list_tasks, start_new_task},
 };
-use crate::state::AppDeps;
-use crate::utils::jwt::verify_user_jwt;
+use crate::utils::{configs::fetch_configs, jwt::verify_user_jwt, state::AppDeps};
 
 async fn auth_validator(
     req: ServiceRequest,
@@ -57,8 +53,8 @@ async fn main() -> std::io::Result<()> {
         .await
     {
         Ok(pool) => pool,
-        Err(_) => {
-            std::process::exit(1);
+        Err(err) => {
+            panic!("{}", format!("failed to connect to the database: {}", err));
         }
     };
     HttpServer::new(move || {

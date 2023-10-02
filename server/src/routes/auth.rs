@@ -1,20 +1,18 @@
 use actix_web::{web, HttpResponse, HttpResponseBuilder, Responder};
+use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
 use crate::api::gh::{fetch_gh_user, TokenPayload, TokenVerificationPayload};
-use crate::state::AppDeps;
-use crate::utils::errors::PunchTaskError;
-use crate::utils::jwt::sign_user_jwt;
-use serde::{Deserialize, Serialize};
+use crate::utils::{errors::PunchTaskError, jwt::sign_user_jwt, state::AppDeps};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct UserStatus {
     pub tasks_in_progress: i64,
 }
 
-#[derive(Debug, Deserialize, Serialize, FromRow)]
-struct TasksStatus {
-    in_progress_count: i64,
+#[derive(Deserialize, FromRow, Serialize)]
+pub struct TasksCount {
+    pub count: i64,
 }
 
 pub async fn client_id(app_deps: web::Data<AppDeps>) -> String {
@@ -40,9 +38,9 @@ pub async fn verify() -> HttpResponseBuilder {
 
 pub async fn status(
     app_deps: web::Data<AppDeps>,
-    token: web::ReqData<TokenPayload>,
+    token: web::ReqData<&TokenPayload>,
 ) -> impl Responder {
-    let count_op = sqlx::query_as::<_, TasksStatus>(
+    let count_op = sqlx::query_as::<_, TasksCount>(
         r#"
             SELECT
                 COUNT(*) as in_progress_count
@@ -60,7 +58,7 @@ pub async fn status(
     match count_op {
         Ok(count_result) => {
             return Ok(HttpResponse::Ok().json(serde_json::json!(UserStatus {
-                tasks_in_progress: count_result.in_progress_count,
+                tasks_in_progress: count_result.count,
             })));
         }
         Err(_) => {

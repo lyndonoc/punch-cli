@@ -1,18 +1,18 @@
 use base64::{engine::general_purpose, Engine};
-use serde::{Deserialize, Serialize};
 use reqwest;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct TokenVerificationPayload {
     pub access_token: String,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct GitHubUser {
     pub id: u64,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct TokenPayload {
     pub user: GitHubUser,
     pub token: String,

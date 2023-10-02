@@ -2,7 +2,7 @@ use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
-#[derive(Debug, Deserialize, Serialize, FromRow)]
+#[derive(Deserialize, FromRow, Serialize)]
 pub struct TaskModel {
     pub id: i64,
     pub name: String,
@@ -40,7 +40,7 @@ pub fn tasks_to_task_report(tasks: Vec<TaskModel>, name: String, right_now: i64)
     });
 }
 
-#[derive(Debug, Deserialize, Serialize, FromRow)]
+#[derive(Deserialize, FromRow, Serialize)]
 pub struct TaskListModel {
     pub name: String,
     pub duration: BigDecimal,
@@ -48,7 +48,7 @@ pub struct TaskListModel {
     pub finished_at: Option<i64>,
 }
 
-#[derive(Debug, Deserialize, Serialize, FromRow)]
+#[derive(Deserialize, FromRow, Serialize)]
 pub struct TaskListModelForResponse {
     pub name: String,
     pub duration: i64,

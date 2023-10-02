@@ -1,15 +1,16 @@
-use actix_web::{web, HttpResponse, Responder};
 use std::time::SystemTime;
 
+use actix_web::{web, HttpResponse, Responder};
+use bigdecimal::ToPrimitive;
 use serde::Deserialize;
 
 use crate::api::gh::TokenPayload;
 use crate::models::tasks::{
     tasks_to_task_report, TaskListModel, TaskListModelForResponse, TaskModel,
 };
-use crate::state::AppDeps;
-use crate::utils::errors::PunchTaskError;
-use bigdecimal::ToPrimitive;
+use crate::utils::{errors::PunchTaskError, state::AppDeps};
+
+use super::auth::TasksCount;
 
 #[derive(Deserialize)]
 pub struct BaseTaskInfo {
@@ -24,32 +25,43 @@ pub struct TimeFilterInfo {
 
 pub async fn start_new_task(
     app_deps: web::Data<AppDeps>,
-    token: web::ReqData<TokenPayload>,
+    token: web::ReqData<&TokenPayload>,
     task_info: web::Json<BaseTaskInfo>,
 ) -> impl Responder {
     let task_name = task_info.name.to_lowercase();
-    let dupe_count = match sqlx::query!(
-            "SELECT COUNT(*) FROM tasks WHERE name = $1 AND user_github_id = $2 AND finished_at IS NULL;", 
-            task_name,
-            token.user.id.to_string(),
-        )
-        .fetch_one(&app_deps.db_pool)
-        .await {
-            Ok(count) => count.count.unwrap(),
-            Err(_) => return Err(PunchTaskError::InternalError),
-        };
+    let dupe_count = match sqlx::query_as::<_, TasksCount>(
+        "
+            SELECT
+                COUNT(*)
+            FROM
+                tasks
+            WHERE
+                name = $1 AND
+                user_github_id = $2 AND
+                finished_at IS NULL;
+        ",
+    )
+    .bind(&task_name)
+    .bind(token.user.id.to_string())
+    .fetch_one(&app_deps.db_pool)
+    .await
+    {
+        Ok(count) => count.count,
+        Err(_) => return Err(PunchTaskError::InternalError),
+    };
     if dupe_count > 0 {
         return Err(PunchTaskError::TaskAlreadyInProgress);
     }
-    let new_task_op = sqlx::query_as!(
-        TaskModel,
-        r#"
+    let new_task_op = sqlx::query_as::<_, TaskModel>(
+        "
             INSERT INTO tasks (name, user_github_id, started_at)
             VALUES ($1, $2, $3)
             RETURNING *;
-            "#,
-        task_name,
-        token.user.id.to_string(),
+        ",
+    )
+    .bind(&task_name)
+    .bind(token.user.id.to_string())
+    .bind(
         match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
             Ok(n) => n.as_secs() as i64,
             Err(_) => return Err(PunchTaskError::InternalError),
@@ -69,7 +81,7 @@ pub async fn start_new_task(
 
 pub async fn finish_task(
     app_deps: web::Data<AppDeps>,
-    token: web::ReqData<TokenPayload>,
+    token: web::ReqData<&TokenPayload>,
     task_info: web::Json<BaseTaskInfo>,
 ) -> impl Responder {
     let task_name = task_info.name.to_lowercase();
@@ -77,18 +89,22 @@ pub async fn finish_task(
         Ok(n) => n.as_secs() as i64,
         Err(_) => return Err(PunchTaskError::InternalError),
     };
-    let update_op = sqlx::query_as!(
-        TaskModel,
-        r#"
-            UPDATE tasks
-            SET finished_at = $1
-            WHERE name = $2 AND user_github_id = $3 AND finished_at IS NULL
+    let update_op = sqlx::query_as::<_, TaskModel>(
+        "
+            UPDATE 
+                tasks
+            SET
+                finished_at = $1
+            WHERE
+                name = $2 AND
+                user_github_id = $3 AND
+                finished_at IS NULL
             RETURNING *;
-            "#,
-        finished_at,
-        task_name,
-        token.user.id.to_string(),
+        ",
     )
+    .bind(finished_at)
+    .bind(task_name)
+    .bind(token.user.id.to_string())
     .fetch_one(&app_deps.db_pool)
     .await;
     match update_op {
@@ -107,19 +123,18 @@ pub async fn finish_task(
 
 pub async fn cancel_task(
     app_deps: web::Data<AppDeps>,
-    token: web::ReqData<TokenPayload>,
+    token: web::ReqData<&TokenPayload>,
     task_info: web::Json<BaseTaskInfo>,
 ) -> impl Responder {
     let task_name = task_info.name.to_lowercase();
-    let delete_op = sqlx::query_as!(
-        TaskModel,
-        r#"
+    let delete_op = sqlx::query(
+        "
             DELETE FROM tasks
             WHERE name = $1 AND user_github_id = $2 AND finished_at IS NULL;
-            "#,
-        task_name,
-        token.user.id.to_string(),
+        ",
     )
+    .bind(&task_name)
+    .bind(token.user.id.to_string())
     .execute(&app_deps.db_pool)
     .await;
     match delete_op {
@@ -137,7 +152,7 @@ pub async fn cancel_task(
 
 pub async fn get_task(
     app_deps: web::Data<AppDeps>,
-    token: web::ReqData<TokenPayload>,
+    token: web::ReqData<&TokenPayload>,
     name: web::Path<String>,
     ts_filter: web::Query<TimeFilterInfo>,
 ) -> impl Responder {
@@ -154,23 +169,24 @@ pub async fn get_task(
         Some(until) => until,
         None => std::i64::MAX,
     };
-    let get_task_op = sqlx::query_as!(
-        TaskModel,
-        r#"
+    let get_task_op = sqlx::query_as::<_, TaskModel>(
+        "
             SELECT *
-            FROM tasks
+            FROM
+                tasks
             WHERE 
-            name = $1 AND 
-            user_github_id = $2 AND
-            started_at <= $3 AND
-            (finished_at IS NULL OR finished_at >= $4)
-            ORDER BY started_at ASC;
-            "#,
-        task_name,
-        token.user.id.to_string(),
-        until,
-        since,
+                name = $1 AND 
+                user_github_id = $2 AND
+                started_at <= $3 AND
+                (finished_at IS NULL OR finished_at >= $4)
+            ORDER BY
+                started_at ASC;
+        ",
     )
+    .bind(&task_name)
+    .bind(token.user.id.to_string())
+    .bind(until)
+    .bind(since)
     .fetch_all(&app_deps.db_pool)
     .await;
     match get_task_op {
@@ -189,7 +205,7 @@ pub async fn get_task(
 
 pub async fn list_tasks(
     app_deps: web::Data<AppDeps>,
-    token: web::ReqData<TokenPayload>,
+    token: web::ReqData<&TokenPayload>,
 ) -> impl Responder {
     let task_rows = sqlx::query_as::<_, TaskListModel>(
         r#"

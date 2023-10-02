@@ -1,9 +1,9 @@
-use derive_more::{Display, Error};
 use actix_web::{
-    HttpResponse,
     error,
     http::{header::ContentType, StatusCode},
+    HttpResponse,
 };
+use derive_more::{Display, Error};
 
 #[derive(Debug, Display, Error)]
 pub enum PunchTaskError {
