@@ -18,16 +18,12 @@ pub struct TokenPayload {
     pub token: String,
 }
 
-pub async fn fetch_gh_user(
-    client_id: String,
-    client_secret: String,
-    token: String,
-) -> TokenPayload {
+pub async fn fetch_gh_user(client_id: &str, client_secret: &str, token: &str) -> TokenPayload {
     let mut base64 = String::new();
     _ = general_purpose::STANDARD
         .encode_string(format!("{}:{}", client_id, client_secret), &mut base64);
     let payload = TokenVerificationPayload {
-        access_token: token.clone(),
+        access_token: token.to_owned(),
     };
     reqwest::Client::new()
         .post(format!(

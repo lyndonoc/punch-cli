@@ -5,11 +5,6 @@ use sqlx::FromRow;
 use crate::api::gh::{fetch_gh_user, TokenPayload, TokenVerificationPayload};
 use crate::utils::{errors::PunchTaskError, jwt::sign_user_jwt, state::AppDeps};
 
-#[derive(Deserialize, Serialize)]
-pub struct UserStatus {
-    pub tasks_in_progress: i64,
-}
-
 #[derive(Deserialize, FromRow, Serialize)]
 pub struct TasksCount {
     pub count: i64,
@@ -24,9 +19,9 @@ pub async fn login(
     token_payload: web::Json<TokenVerificationPayload>,
 ) -> String {
     let gh_user = fetch_gh_user(
-        app_deps.configs.github_client_id.clone(),
-        app_deps.configs.github_client_secret.clone(),
-        token_payload.access_token.clone(),
+        &app_deps.configs.github_client_id,
+        &app_deps.configs.github_client_secret,
+        &token_payload.access_token,
     )
     .await;
     sign_user_jwt::<TokenPayload>(gh_user, &app_deps.configs.jwt_secret)
@@ -57,8 +52,8 @@ pub async fn status(
     .await;
     match count_op {
         Ok(count_result) => {
-            return Ok(HttpResponse::Ok().json(serde_json::json!(UserStatus {
-                tasks_in_progress: count_result.count,
+            return Ok(HttpResponse::Ok().json(serde_json::json!({
+                "tasks_in_progress": count_result.count,
             })));
         }
         Err(_) => {

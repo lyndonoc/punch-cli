@@ -28,7 +28,7 @@ async fn auth_validator(
 ) -> Result<ServiceRequest, (Error, ServiceRequest)> {
     let token = credentials.token();
     let secret = env::var("JWT_SECRET").expect("internal server error");
-    match verify_user_jwt::<TokenPayload>(token, secret) {
+    match verify_user_jwt::<TokenPayload>(token, &secret) {
         Ok(decoded) => {
             req.extensions_mut().insert(decoded.claims.claim);
             Ok(req)

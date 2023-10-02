@@ -3,6 +3,22 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
 #[derive(Deserialize, FromRow, Serialize)]
+pub struct TaskListModel {
+    pub name: String,
+    pub duration: BigDecimal,
+    pub started_at: i64,
+    pub finished_at: Option<i64>,
+}
+
+#[derive(Deserialize, FromRow, Serialize)]
+pub struct TaskListModelForResponse {
+    pub name: String,
+    pub duration: i64,
+    pub started_at: i64,
+    pub finished_at: Option<i64>,
+}
+
+#[derive(Deserialize, FromRow, Serialize)]
 pub struct TaskModel {
     pub id: i64,
     pub name: String,
@@ -22,7 +38,7 @@ impl TaskModel {
     }
 }
 
-pub fn tasks_to_task_report(tasks: Vec<TaskModel>, name: String, right_now: i64) -> impl Serialize {
+pub fn tasks_to_task_report(tasks: &Vec<TaskModel>, name: &str, right_now: i64) -> impl Serialize {
     let mut is_in_progress = false;
     let mut duration_sum: i64 = 0;
     for task in tasks {
@@ -38,20 +54,4 @@ pub fn tasks_to_task_report(tasks: Vec<TaskModel>, name: String, right_now: i64)
         "status": if is_in_progress { "in progress" } else { "complete "},
         "duration": duration_sum,
     });
-}
-
-#[derive(Deserialize, FromRow, Serialize)]
-pub struct TaskListModel {
-    pub name: String,
-    pub duration: BigDecimal,
-    pub started_at: i64,
-    pub finished_at: Option<i64>,
-}
-
-#[derive(Deserialize, FromRow, Serialize)]
-pub struct TaskListModelForResponse {
-    pub name: String,
-    pub duration: i64,
-    pub started_at: i64,
-    pub finished_at: Option<i64>,
 }

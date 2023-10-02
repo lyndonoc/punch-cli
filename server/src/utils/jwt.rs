@@ -38,12 +38,12 @@ pub fn sign_user_jwt<T: Serialize>(claim: T, secret: &str) -> String {
     .expect("failed to sign JWT")
 }
 
-pub fn verify_user_jwt<T>(token: &str, secret: String) -> Result<TokenData<BaseJWTClaims<T>>>
+pub fn verify_user_jwt<T>(token: &str, secret: &str) -> Result<TokenData<BaseJWTClaims<T>>>
 where
     T: for<'a> Deserialize<'a>,
 {
     decode::<BaseJWTClaims<T>>(
-        &token,
+        token,
         &DecodingKey::from_secret(secret.as_bytes()),
         &Validation::new(Algorithm::HS512),
     )

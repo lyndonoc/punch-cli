@@ -103,7 +103,7 @@ pub async fn finish_task(
         ",
     )
     .bind(finished_at)
-    .bind(task_name)
+    .bind(&task_name)
     .bind(token.user.id.to_string())
     .fetch_one(&app_deps.db_pool)
     .await;
@@ -194,7 +194,7 @@ pub async fn get_task(
             if tasks.len() < 1 {
                 return Err(PunchTaskError::TaskNotFound);
             }
-            let task_report = tasks_to_task_report(tasks, task_name, right_now);
+            let task_report = tasks_to_task_report(&tasks, &task_name, right_now);
             return Ok(HttpResponse::Ok().json(task_report));
         }
         Err(_) => {
