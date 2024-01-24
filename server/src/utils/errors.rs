@@ -5,10 +5,19 @@ use actix_web::{
 };
 use derive_more::{Display, Error};
 
+pub struct ReportableError {
+    pub error: PunchTaskError,
+    pub message: String,
+}
+
 #[derive(Debug, Display, Error)]
 pub enum PunchTaskError {
     #[display(fmt = "internal error")]
     InternalError,
+
+    ReportableInternalError {
+        message: String,
+    },
 
     #[display(fmt = "the task is already in progress")]
     TaskAlreadyInProgress,
@@ -30,6 +39,9 @@ impl error::ResponseError for PunchTaskError {
     fn status_code(&self) -> StatusCode {
         match *self {
             PunchTaskError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
+            PunchTaskError::ReportableInternalError { message: _ } => {
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
             PunchTaskError::TaskAlreadyInProgress => StatusCode::BAD_REQUEST,
             PunchTaskError::InProgressTaskNotFound => StatusCode::BAD_REQUEST,
             PunchTaskError::TaskNotFound => StatusCode::NOT_FOUND,

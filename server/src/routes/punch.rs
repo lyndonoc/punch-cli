@@ -25,7 +25,7 @@ pub struct TimeFilterInfo {
 
 pub async fn start_new_task(
     app_deps: web::Data<AppDeps>,
-    token: web::ReqData<&TokenPayload>,
+    token: web::ReqData<TokenPayload>,
     task_info: web::Json<BaseTaskInfo>,
 ) -> impl Responder {
     let task_name = task_info.name.to_lowercase();
@@ -81,7 +81,7 @@ pub async fn start_new_task(
 
 pub async fn finish_task(
     app_deps: web::Data<AppDeps>,
-    token: web::ReqData<&TokenPayload>,
+    token: web::ReqData<TokenPayload>,
     task_info: web::Json<BaseTaskInfo>,
 ) -> impl Responder {
     let task_name = task_info.name.to_lowercase();
@@ -123,7 +123,7 @@ pub async fn finish_task(
 
 pub async fn cancel_task(
     app_deps: web::Data<AppDeps>,
-    token: web::ReqData<&TokenPayload>,
+    token: web::ReqData<TokenPayload>,
     task_info: web::Json<BaseTaskInfo>,
 ) -> impl Responder {
     let task_name = task_info.name.to_lowercase();
@@ -152,7 +152,7 @@ pub async fn cancel_task(
 
 pub async fn get_task(
     app_deps: web::Data<AppDeps>,
-    token: web::ReqData<&TokenPayload>,
+    token: web::ReqData<TokenPayload>,
     name: web::Path<String>,
     ts_filter: web::Query<TimeFilterInfo>,
 ) -> impl Responder {
@@ -205,7 +205,7 @@ pub async fn get_task(
 
 pub async fn list_tasks(
     app_deps: web::Data<AppDeps>,
-    token: web::ReqData<&TokenPayload>,
+    token: web::ReqData<TokenPayload>,
 ) -> impl Responder {
     let task_rows = sqlx::query_as::<_, TaskListModel>(
         r#"

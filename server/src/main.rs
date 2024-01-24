@@ -3,9 +3,9 @@ pub mod models;
 pub mod routes;
 pub mod utils;
 
-use std::env;
-
-use actix_web::{dev::ServiceRequest, error::Error, web, App, HttpMessage, HttpServer, Responder};
+use actix_web::{
+    dev::ServiceRequest, error::Error as ACTIXError, web, App, HttpMessage, HttpServer, Responder,
+};
 use actix_web_httpauth::{
     extractors::{
         bearer::{self, BearerAuth},
@@ -25,10 +25,10 @@ use crate::utils::{configs::fetch_configs, jwt::verify_user_jwt, state::AppDeps}
 async fn auth_validator(
     req: ServiceRequest,
     credentials: BearerAuth,
-) -> Result<ServiceRequest, (Error, ServiceRequest)> {
+) -> Result<ServiceRequest, (ACTIXError, ServiceRequest)> {
+    let configs = req.app_data::<web::Data<AppDeps>>().unwrap();
     let token = credentials.token();
-    let secret = env::var("JWT_SECRET").expect("internal server error");
-    match verify_user_jwt::<TokenPayload>(token, &secret) {
+    match verify_user_jwt::<TokenPayload>(token, &configs.configs.jwt_secret) {
         Ok(decoded) => {
             req.extensions_mut().insert(decoded.claims.claim);
             Ok(req)

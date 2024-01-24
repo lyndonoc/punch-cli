@@ -10,6 +10,10 @@ pub struct TasksCount {
     pub count: i64,
 }
 
+pub async fn verify() -> HttpResponseBuilder {
+    HttpResponse::NoContent()
+}
+
 pub async fn client_id(app_deps: web::Data<AppDeps>) -> String {
     app_deps.configs.github_client_id.clone()
 }
@@ -17,23 +21,29 @@ pub async fn client_id(app_deps: web::Data<AppDeps>) -> String {
 pub async fn login(
     app_deps: web::Data<AppDeps>,
     token_payload: web::Json<TokenVerificationPayload>,
-) -> String {
-    let gh_user = fetch_gh_user(
+) -> impl Responder {
+    let token = match fetch_gh_user(
         &app_deps.configs.github_client_id,
         &app_deps.configs.github_client_secret,
         &token_payload.access_token,
     )
-    .await;
-    sign_user_jwt::<TokenPayload>(gh_user, &app_deps.configs.jwt_secret)
-}
-
-pub async fn verify() -> HttpResponseBuilder {
-    HttpResponse::NoContent()
+    .await
+    {
+        Ok(gh_user) => sign_user_jwt::<TokenPayload>(gh_user, &app_deps.configs.jwt_secret),
+        Err(err) => {
+            return Err(PunchTaskError::ReportableInternalError {
+                message: err.to_string(),
+            });
+        }
+    };
+    token.map_err(|err| PunchTaskError::ReportableInternalError {
+        message: err.to_string(),
+    })
 }
 
 pub async fn status(
     app_deps: web::Data<AppDeps>,
-    token: web::ReqData<&TokenPayload>,
+    token: web::ReqData<TokenPayload>,
 ) -> impl Responder {
     let count_op = sqlx::query_as::<_, TasksCount>(
         r#"

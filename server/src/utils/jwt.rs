@@ -1,23 +1,24 @@
 use std::ops::Add;
+use std::result::Result;
 use std::time::{Duration, SystemTime};
 
 use jsonwebtoken::{
-    decode, encode, errors::Result, Algorithm, DecodingKey, EncodingKey, Header, TokenData,
-    Validation,
+    decode, encode, errors::Result as JWTError, Algorithm, DecodingKey, EncodingKey, Header,
+    TokenData, Validation,
 };
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Deserialize, PartialEq, Serialize)]
 pub struct BaseJWTClaims<T> {
     pub claim: T,
     iat: u64,
     exp: u64,
 }
 
-pub fn sign_user_jwt<T: Serialize>(claim: T, secret: &str) -> String {
+pub fn sign_user_jwt<T: Serialize>(claim: T, secret: &str) -> Result<String, String> {
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap();
+        .map_err(|err| err.to_string())?;
 
     let claims = BaseJWTClaims {
         claim,
@@ -35,10 +36,10 @@ pub fn sign_user_jwt<T: Serialize>(claim: T, secret: &str) -> String {
         &claims,
         &EncodingKey::from_secret(secret.as_bytes()),
     )
-    .expect("failed to sign JWT")
+    .map_err(|err| err.to_string())
 }
 
-pub fn verify_user_jwt<T>(token: &str, secret: &str) -> Result<TokenData<BaseJWTClaims<T>>>
+pub fn verify_user_jwt<T>(token: &str, secret: &str) -> JWTError<TokenData<BaseJWTClaims<T>>>
 where
     T: for<'a> Deserialize<'a>,
 {
